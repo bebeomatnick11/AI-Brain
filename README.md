@@ -34,7 +34,7 @@ Dashboard + API để lưu trữ và theo dõi các AI Brain được tạo tron
 npm install
 node server.js
 # Mở http://localhost:3000
-# Password: ILove36
+# Password: Your_Password
 ```
 
 ## API cho Roblox

@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#0a0a0f" />
+  <title>Roblox AI Brain Registry</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div id="app">
+    <!-- LOGIN SCREEN -->
+    <div id="login-screen" class="screen">
+      <div class="login-card">
+        <div class="logo">
+          <div class="logo-icon">🧠</div>
+          <h1>AI Brain Registry</h1>
+          <p class="subtitle">Roblox Adaptive Agents</p>
+        </div>
+        <form id="login-form">
+          <div class="input-group">
+            <label for="password">Mật khẩu truy cập</label>
+            <input
+              type="password"
+              id="password"
+              placeholder="Nhập mật khẩu..."
+              autocomplete="current-password"
+              required
+            />
+          </div>
+          <button type="submit" id="login-btn" class="btn btn-primary">
+            <span class="btn-text">Đăng nhập</span>
+            <span class="btn-loading hidden">Đang xác thực...</span>
+          </button>
+          <p id="login-error" class="error-msg hidden"></p>
+        </form>
+        <p class="footer-note">Chỉ người có mật khẩu mới được xem danh sách Brain</p>
+      </div>
+    </div>
+
+    <!-- DASHBOARD -->
+    <div id="dashboard" class="screen hidden">
+      <header class="header">
+        <div class="header-left">
+          <span class="logo-sm">🧠</span>
+          <h2>AI Brain Registry</h2>
+        </div>
+        <div class="header-right">
+          <button id="logout-btn" class="btn btn-ghost">Đăng xuất</button>
+        </div>
+      </header>
+
+      <main class="main">
+        <!-- STATS -->
+        <section class="stats">
+          <div class="stat-card">
+            <div class="stat-value" id="stat-total">0</div>
+            <div class="stat-label">Tổng Brain</div>
+          </div>
+          <div class="stat-card online">
+            <div class="stat-value" id="stat-online">0</div>
+            <div class="stat-label">Online</div>
+          </div>
+          <div class="stat-card offline">
+            <div class="stat-value" id="stat-offline">0</div>
+            <div class="stat-label">Offline</div>
+          </div>
+        </section>
+
+        <!-- SEARCH & FILTER -->
+        <section class="controls">
+          <div class="search-box">
+            <input
+              type="search"
+              id="search-input"
+              placeholder="Tìm theo UserId, DisplayName, Brain ID..."
+            />
+          </div>
+          <div class="filter-btns">
+            <button class="filter-btn active" data-status="">Tất cả</button>
+            <button class="filter-btn" data-status="online">Online</button>
+            <button class="filter-btn" data-status="offline">Offline</button>
+          </div>
+        </section>
+
+        <!-- BRAIN LIST -->
+        <section class="brain-list-section">
+          <div id="loading-state" class="state-box hidden">
+            <div class="spinner"></div>
+            <p>Đang tải dữ liệu...</p>
+          </div>
+          <div id="empty-state" class="state-box hidden">
+            <div class="empty-icon">🤖</div>
+            <p class="empty-title">Chưa có AI Brain nào được tạo và chạy trong Roblox.</p>
+            <p class="empty-desc">Khi Agent đăng ký thành công, Brain sẽ xuất hiện tại đây.</p>
+          </div>
+          <div id="error-state" class="state-box hidden">
+            <p class="error-title">Không thể tải dữ liệu</p>
+            <p id="error-detail"></p>
+            <button id="retry-btn" class="btn btn-primary">Thử lại</button>
+          </div>
+          <div id="brain-list" class="brain-list"></div>
+        </section>
+      </main>
+    </div>
+
+    <!-- DETAIL MODAL -->
+    <div id="detail-modal" class="modal hidden">
+      <div class="modal-backdrop"></div>
+      <div class="modal-content">
+        <button class="modal-close" id="modal-close">&times;</button>
+        <div id="detail-body"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>

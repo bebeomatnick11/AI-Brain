@@ -22,8 +22,8 @@ Dashboard + API để lưu trữ và theo dõi các AI Brain được tạo tron
    - Build Command: `npm install`
    - Start Command: `node server.js`
    - Environment:
-     - `DASHBOARD_PASSWORD` = `ILove36` (hoặc đổi)
-     - `BRAIN_API_SECRET` = `AstraBrainSecret_ChangeMe_InProduction_2026` (đổi thành secret mạnh)
+     - `DASHBOARD_PASSWORD` = `Your_password` (hoặc đổi)
+     - `BRAIN_API_SECRET` = `Your_idea` (đổi thành secret mạnh)
      - `NODE_ENV` = `production`
 5. Add Persistent Disk (mount path `/opt/render/project/src/data` hoặc set `DATA_DIR`)
 6. Deploy → nhận public URL dạng `https://your-app.onrender.com`

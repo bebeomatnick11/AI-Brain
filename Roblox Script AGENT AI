@@ -1,15 +1,30 @@
---// ASTRA AI AGENT V4 + Brain Registry
---// Roblox Executor LocalScript
---// Adaptive Agent + Skills + Personality + Instructions + Memory
---// Clone AI + Pathfinding + World Scanner + Bubble Thoughts
---// Chatbox + Language + Autonomous Brain + Remote Brain Adapter
---// + Roblox AI Brain Registry (register + heartbeat)
+--============================================================
+-- ASTRA AI AGENT V5
+-- Brain Core Edition
+--
+-- Brain Core
+-- Memory Retrieval
+-- Intent Detection
+-- Skill Executor
+-- Planner
+-- World Model
+-- Event Detection
+-- Action System
+-- Self State
+-- Remote Brain + Local Fallback
+-- Brain Registry
+-- Mobile GUI
+--============================================================
 
-if getgenv().ASTRA_AGENT_V4 then
+if getgenv().ASTRA_AGENT_V5 then
     pcall(function()
-        getgenv().ASTRA_AGENT_V4:Shutdown()
+        getgenv().ASTRA_AGENT_V5:Shutdown()
     end)
 end
+
+--============================================================
+-- SERVICES
+--============================================================
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -20,25 +35,25 @@ local CoreGui = game:GetService("CoreGui")
 local Workspace = workspace
 
 local LocalPlayer = Players.LocalPlayer
-
 if not LocalPlayer then
     return
 end
 
-repeat task.wait() until LocalPlayer.Character
+repeat
+    task.wait()
+until LocalPlayer.Character
 
---==================================================
+--============================================================
 -- CONFIG
---==================================================
+--============================================================
 
 local CONFIG = {
 
     Remote = {
+
         Enabled = true,
 
-        -- ▼▼▼ THAY 2 DÒNG NÀY ▼▼▼
-        BaseURL = "https://TEN-CUA-BAN.onrender.com",  -- Link Render của bạn
-        -- ▲▲▲ THAY 2 DÒNG NÀY ▲▲▲
+        BaseURL = "https://ai-brain-5w7u.onrender.com",
 
         Endpoints = {
             "/api/chat",
@@ -48,1272 +63,5344 @@ local CONFIG = {
         },
 
         Timeout = 12,
+
         MaxContext = 9000,
 
-        -- Brain Registry
+        RetryCooldown = 30,
+
         BrainRegistry = {
+
             Enabled = true,
-            Secret = "AstraBrainSecret_ChangeMe_InProduction_2026", -- Phải khớp với BRAIN_API_SECRET trên Render
+
+            -- WARNING:
+            -- Secret trong LocalScript không phải secret tuyệt đối.
+            Secret = "Astra_Secret_2014_1990",
+
             RegisterPath = "/api/brains/register",
+
             HeartbeatPath = "/api/brains/heartbeat",
-            HeartbeatInterval = 25, -- giây
+
+            HeartbeatInterval = 25
         }
     },
 
     Agent = {
+
         Name = "Astra",
+
         Language = "Vietnamese",
-        Personality = "thân thiện, thông minh, tò mò, trung thực và chủ động",
-        Style = "nói tự nhiên, không quá dài, giải thích khi cần",
+
+        Personality =
+            "thân thiện, thông minh, tò mò, trung thực, chủ động nhưng không giả vờ biết",
+
+        Style =
+            "nói tự nhiên, rõ ràng, không quá dài, giải thích khi cần",
+
         Initiative = 0.7,
+
         Creativity = 0.7,
+
         MemoryLimit = 200,
+
         ConversationLimit = 40,
+
         ObservationLimit = 100,
-        ThoughtInterval = 3,
+
+        EventLimit = 100,
+
+        LearnedRuleLimit = 50,
+
+        ThoughtInterval = 5,
+
         ScanInterval = 2.5,
+
         FollowDistance = 7,
+
         StopDistance = 4,
+
         TeleportDistance = 70,
+
         ScanDistance = 100
     },
 
     Movement = {
+
         AgentRadius = 2,
+
         AgentHeight = 5,
+
         AgentCanJump = true,
+
         AgentCanClimb = true,
+
         WaypointSpacing = 4,
+
         Recalculate = 1
+    },
+
+    World = {
+
+        MaxPlayers = 30,
+
+        MaxParts = 500,
+
+        ChangeThreshold = 8
+    },
+
+    Brain = {
+
+        MinimumMemoryScore = 0.18,
+
+        MaxRetrievedMemories = 12,
+
+        MaxRetrievedRules = 8,
+
+        MaxRecentEvents = 8,
+
+        EnableLearning = true,
+
+        EnableEventMemory = true,
+
+        EnablePlanning = true,
+
+        EnableRemote = true
     }
 }
 
---==================================================
+--============================================================
 -- STATE
---==================================================
+--============================================================
 
 local Agent = {
+
     Alive = true,
+
     Character = LocalPlayer.Character,
+
     Root = nil,
+
     Humanoid = nil,
+
     Clone = nil,
+
     CloneRoot = nil,
+
     CloneHumanoid = nil,
+
     Following = true,
+
     Moving = false,
+
     BrainBusy = false,
+
     PathId = 0,
+
     LastPath = 0,
+
     LastScan = 0,
+
     LastThought = 0,
+
     LastRemote = 0,
+
+    LastRemoteFailure = 0,
+
     RemoteAvailable = false,
+
+    RemoteFailures = 0,
+
     CurrentGoal = nil,
+
     CurrentThought = "",
+
+    CurrentAction = nil,
+
+    CurrentPlan = nil,
+
     Memory = {},
+
     Conversation = {},
+
     Observations = {},
+
+    PreviousObservations = {},
+
+    Events = {},
+
     Instructions = {},
+
     Skills = {},
-    BrainId = nil, -- sẽ được tạo ở dưới
+
+    LearnedRules = {},
+
+    BrainId = nil,
+
     Shutdown = function() end
 }
 
-getgenv().ASTRA_AGENT_V4 = Agent
+getgenv().ASTRA_AGENT_V5 = Agent
 
--- Tạo BrainId ổn định cho session này
-Agent.BrainId = tostring(LocalPlayer.UserId) .. "_" .. HttpService:GenerateGUID(false):gsub("%-", ""):sub(1, 12)
+Agent.BrainId =
+    "ASTRA-" ..
+    tostring(LocalPlayer.UserId)
 
---==================================================
--- CHARACTER
---==================================================
+--============================================================
+-- BRAIN STATE
+--============================================================
+
+local BrainState = {
+
+    Turn = 0,
+
+    LastIntent = nil,
+
+    LastTopic = nil,
+
+    LastUserMessage = "",
+
+    LastResponse = "",
+
+    Mood = "neutral",
+
+    Confidence = 0.5,
+
+    PendingClarification = nil,
+
+    Thinking = false,
+
+    LastDecision = nil,
+
+    LastActionResult = nil
+}
+
+--============================================================
+-- CHARACTER HELPERS
+--============================================================
 
 local function getHumanoid(character)
-    if not character then return nil end
+
+    if not character then
+        return nil
+    end
+
     return character:FindFirstChildOfClass("Humanoid")
 end
 
 local function getRoot(character)
-    if not character then return nil end
-    return character:FindFirstChild("HumanoidRootPart") or character:FindFirstChild("Torso")
+
+    if not character then
+        return nil
+    end
+
+    return character:FindFirstChild("HumanoidRootPart")
+        or character:FindFirstChild("Torso")
 end
 
 Agent.Humanoid = getHumanoid(Agent.Character)
 Agent.Root = getRoot(Agent.Character)
 
---==================================================
--- UTILITY
---==================================================
+--============================================================
+-- UTILITIES
+--============================================================
 
 local function destroy(object)
+
     if object then
-        pcall(function() object:Destroy() end)
+
+        pcall(function()
+            object:Destroy()
+        end)
+
     end
 end
 
 local function clampText(text, max)
+
     text = tostring(text or "")
+
     if #text > max then
         return string.sub(text, 1, max) .. "..."
     end
+
     return text
 end
 
 local function dist(a, b)
-    if not a or not b then return math.huge end
+
+    if not a or not b then
+        return math.huge
+    end
+
     return (a.Position - b.Position).Magnitude
 end
 
+local function normalize(text)
+
+    text = tostring(text or "")
+
+    text = string.lower(text)
+
+    text = text:gsub("[%c]", " ")
+
+    text = text:gsub("%s+", " ")
+
+    text = text:gsub("^%s+", "")
+
+    text = text:gsub("%s+$", "")
+
+    return text
+end
+
+local function contains(text, list)
+
+    for _, word in ipairs(list) do
+
+        if string.find(text, word, 1, true) then
+            return true
+        end
+
+    end
+
+    return false
+end
+
+local function pick(list)
+
+    if not list or #list == 0 then
+        return ""
+    end
+
+    return list[math.random(1, #list)]
+end
+
+local function safeNumber(value, default)
+
+    local n = tonumber(value)
+
+    if n then
+        return n
+    end
+
+    return default or 0
+end
+
+--============================================================
+-- HTTP
+--============================================================
+
 local function requestFunction()
-    if syn and syn.request then return syn.request end
-    if http and http.request then return http.request end
-    if request then return request end
-    if fluxus and fluxus.request then return fluxus.request end
-    if krnl and krnl.request then return krnl.request end
+
+    if syn and syn.request then
+        return syn.request
+    end
+
+    if http and http.request then
+        return http.request
+    end
+
+    if request then
+        return request
+    end
+
+    if fluxus and fluxus.request then
+        return fluxus.request
+    end
+
+    if krnl and krnl.request then
+        return krnl.request
+    end
+
     return nil
 end
 
 local HTTP = requestFunction()
 
---==================================================
--- MEMORY
---==================================================
+--============================================================
+-- MEMORY CORE
+--============================================================
 
-local function remember(category, text)
-    if not text or text == "" then return end
+local function remember(category, text, importance, metadata)
+
+    if not text or tostring(text) == "" then
+        return
+    end
+
     table.insert(Agent.Memory, {
+
+        id = HttpService:GenerateGUID(false),
+
         category = tostring(category or "general"),
+
         text = tostring(text),
+
+        importance = math.clamp(
+            tonumber(importance) or 0.5,
+            0,
+            1
+        ),
+
+        metadata = metadata or {},
+
         time = os.time()
     })
+
     while #Agent.Memory > CONFIG.Agent.MemoryLimit do
         table.remove(Agent.Memory, 1)
     end
 end
 
 local function memoryText(limit)
+
     local result = {}
-    local start = math.max(1, #Agent.Memory - (limit or 40))
-    for i = start, #Agent.Memory do
+
+    local startIndex =
+        math.max(
+            1,
+            #Agent.Memory - (limit or 40) + 1
+        )
+
+    for i = startIndex, #Agent.Memory do
+
         local item = Agent.Memory[i]
-        table.insert(result, "[" .. item.category .. "] " .. item.text)
+
+        table.insert(
+            result,
+            string.format(
+                "[%s | %.2f] %s",
+                item.category,
+                item.importance or 0.5,
+                item.text
+            )
+        )
+
     end
+
     return table.concat(result, "\n")
 end
 
-local function addInstruction(text)
-    if not text or text == "" then return end
-    table.insert(Agent.Instructions, tostring(text))
-    remember("instruction", text)
+--============================================================
+-- MEMORY RETRIEVAL
+--============================================================
+
+local function tokenScore(query, text)
+
+    query = normalize(query)
+
+    text = normalize(text)
+
+    if query == "" or text == "" then
+        return 0
+    end
+
+    local score = 0
+
+    for token in string.gmatch(query, "%S+") do
+
+        if #token >= 3 then
+
+            if string.find(text, token, 1, true) then
+                score += 1
+            end
+
+        end
+
+    end
+
+    return score
 end
 
---==================================================
--- SKILLS
---==================================================
+local function retrieveMemories(query)
 
-local function registerSkill(name, description, triggers, instructions)
-    Agent.Skills[string.lower(name)] = {
+    local scored = {}
+
+    for _, item in ipairs(Agent.Memory) do
+
+        local relevance =
+            tokenScore(query, item.text)
+
+        local importance =
+            item.importance or 0.5
+
+        local age =
+            math.max(
+                0,
+                os.time() - (item.time or os.time())
+            )
+
+        local freshness =
+            math.max(
+                0,
+                1 - (age / 604800)
+            )
+
+        local score =
+            relevance * 0.55
+            + importance * 0.30
+            + freshness * 0.15
+
+        if score >= CONFIG.Brain.MinimumMemoryScore then
+
+            table.insert(
+                scored,
+                {
+                    item = item,
+                    score = score
+                }
+            )
+
+        end
+    end
+
+    table.sort(
+        scored,
+        function(a, b)
+            return a.score > b.score
+        end
+    )
+
+    local result = {}
+
+    for i = 1,
+        math.min(
+            #scored,
+            CONFIG.Brain.MaxRetrievedMemories
+        ) do
+
+        table.insert(
+            result,
+            scored[i].item
+        )
+
+    end
+
+    return result
+end
+
+local function retrievedMemoryText(query)
+
+    local memories =
+        retrieveMemories(query)
+
+    local result = {}
+
+    for _, item in ipairs(memories) do
+
+        table.insert(
+            result,
+            string.format(
+                "[%s] %s",
+                item.category,
+                item.text
+            )
+        )
+
+    end
+
+    return table.concat(result, "\n")
+end
+
+--============================================================
+-- INSTRUCTIONS
+--============================================================
+
+local function addInstruction(text)
+
+    if not text or text == "" then
+        return
+    end
+
+    table.insert(
+        Agent.Instructions,
+        tostring(text)
+    )
+
+    remember(
+        "instruction",
+        tostring(text),
+        0.9
+    )
+end
+
+--============================================================
+-- LEARNED RULES
+--============================================================
+
+local function learnRule(trigger, rule, confidence)
+
+    trigger = tostring(trigger or "")
+
+    rule = tostring(rule or "")
+
+    if trigger == "" or rule == "" then
+        return false
+    end
+
+    table.insert(
+        Agent.LearnedRules,
+        {
+
+            trigger = normalize(trigger),
+
+            rule = rule,
+
+            confidence =
+                math.clamp(
+                    tonumber(confidence) or 0.8,
+                    0,
+                    1
+                ),
+
+            time = os.time()
+        }
+    )
+
+    while #Agent.LearnedRules >
+        CONFIG.Agent.LearnedRuleLimit do
+
+        table.remove(
+            Agent.LearnedRules,
+            1
+        )
+
+    end
+
+    remember(
+        "learned_rule",
+        trigger .. " -> " .. rule,
+        0.9
+    )
+
+    return true
+end
+
+local function retrieveRules(message)
+
+    local result = {}
+
+    local lower =
+        normalize(message)
+
+    for _, rule in ipairs(Agent.LearnedRules) do
+
+        if string.find(
+            lower,
+            rule.trigger,
+            1,
+            true
+        ) then
+
+            table.insert(
+                result,
+                rule
+            )
+
+        end
+    end
+
+    table.sort(
+        result,
+        function(a, b)
+            return a.confidence > b.confidence
+        end
+    )
+
+    return result
+end
+
+local function ruleText(message)
+
+    local rules =
+        retrieveRules(message)
+
+    local result = {}
+
+    for i = 1,
+        math.min(
+            #rules,
+            CONFIG.Brain.MaxRetrievedRules
+        ) do
+
+        table.insert(
+            result,
+            rules[i].rule
+        )
+
+    end
+
+    return table.concat(result, "\n")
+end
+
+--============================================================
+-- SKILLS
+--============================================================
+
+local function registerSkill(
+    name,
+    description,
+    triggers,
+    instructions,
+    executor
+)
+
+    name =
+        string.lower(
+            tostring(name or "")
+        )
+
+    if name == "" then
+        return
+    end
+
+    Agent.Skills[name] = {
+
         Name = name,
-        Description = description,
-        Triggers = triggers or {},
-        Instructions = instructions or ""
+
+        Description =
+            description or "",
+
+        Triggers =
+            triggers or {},
+
+        Instructions =
+            instructions or "",
+
+        Execute =
+            executor
     }
 end
 
-registerSkill("build", "Thiết kế hoặc xây dựng một hệ thống.", {"build", "create", "tạo", "làm", "xây"}, [[
+--============================================================
+-- SKILL EXECUTORS
+--============================================================
+
+registerSkill(
+
+    "build",
+
+    "Thiết kế hoặc xây dựng hệ thống.",
+
+    {
+        "build",
+        "create",
+        "tạo",
+        "làm",
+        "xây",
+        "thiết kế"
+    },
+
+    [[
 Phân tích mục tiêu.
 Chia thành các bước.
-Xác định công cụ cần dùng.
-Không giả định những thứ chưa biết.
-Ưu tiên tạo ra kết quả có thể sử dụng được.
-]])
+Xác định thành phần cần thiết.
+Không giả định dữ liệu chưa biết.
+Ưu tiên kết quả có thể sử dụng.
+]],
 
-registerSkill("code", "Viết, sửa và phân tích code.", {"code", "script", "luau", "lua"}, [[
-Phân tích yêu cầu trước.
-Giữ lại tính năng hiện có.
+    function(context)
+
+        return {
+            success = true,
+            message =
+                "Build skill đã được kích hoạt. Tôi sẽ chia mục tiêu thành từng phần."
+        }
+
+    end
+)
+
+registerSkill(
+
+    "code",
+
+    "Viết, sửa và phân tích code.",
+
+    {
+        "code",
+        "script",
+        "luau",
+        "lua",
+        "lập trình"
+    },
+
+    [[
+Phân tích yêu cầu.
+Giữ tính năng hiện có.
 Ưu tiên code hoàn chỉnh.
 Không tự ý xóa chức năng.
-Kiểm tra lỗi logic trước khi trả lời.
-]])
+Kiểm tra lỗi logic.
+]],
 
-registerSkill("debug", "Tìm và sửa lỗi.", {"bug", "error", "fix", "sửa", "lỗi", "debug"}, [[
+    function(context)
+
+        return {
+            success = true,
+            message =
+                "Code skill đã được kích hoạt."
+        }
+
+    end
+)
+
+registerSkill(
+
+    "debug",
+
+    "Tìm và sửa lỗi.",
+
+    {
+        "bug",
+        "error",
+        "fix",
+        "sửa",
+        "lỗi",
+        "debug"
+    },
+
+    [[
 Xác định nguyên nhân.
-Tách lỗi thành từng khả năng.
+Tách lỗi thành các khả năng.
 Kiểm tra giả thuyết.
 Đưa ra cách sửa.
-Nếu chưa đủ dữ liệu thì nói rõ.
-]])
+Nếu thiếu dữ liệu thì nói rõ.
+]],
 
-registerSkill("research", "Thu thập và tổng hợp thông tin.", {"research", "search", "tìm", "nghiên cứu"}, [[
+    function(context)
+
+        return {
+            success = true,
+            message =
+                "Debug skill đã được kích hoạt."
+        }
+
+    end
+)
+
+registerSkill(
+
+    "research",
+
+    "Thu thập và tổng hợp thông tin.",
+
+    {
+        "research",
+        "search",
+        "tìm",
+        "nghiên cứu"
+    },
+
+    [[
 Xác định câu hỏi.
 Thu thập dữ liệu liên quan.
-Phân biệt thông tin chắc chắn và suy đoán.
+Phân biệt sự thật và suy đoán.
 Tóm tắt kết luận.
-]])
+]],
 
-registerSkill("analyze", "Phân tích vấn đề.", {"analyze", "analyse", "phân tích", "đánh giá"}, [[
+    function(context)
+
+        return {
+            success = true,
+            message =
+                "Research skill đã được kích hoạt."
+        }
+
+    end
+)
+
+registerSkill(
+
+    "analyze",
+
+    "Phân tích vấn đề.",
+
+    {
+        "analyze",
+        "analyse",
+        "phân tích",
+        "đánh giá"
+    },
+
+    [[
 Xem xét nhiều khả năng.
 Nêu ưu điểm.
 Nêu nhược điểm.
 Nêu rủi ro.
-Đưa ra kết luận có điều kiện nếu cần.
-]])
+Đưa ra kết luận có điều kiện.
+]],
 
-registerSkill("observe", "Quan sát môi trường Roblox.", {"observe", "scan", "look", "quan sát", "quét", "nhìn"}, [[
+    function(context)
+
+        return {
+            success = true,
+            message =
+                "Analyze skill đã được kích hoạt."
+        }
+
+    end
+)
+
+registerSkill(
+
+    "observe",
+
+    "Quan sát môi trường Roblox.",
+
+    {
+        "observe",
+        "scan",
+        "look",
+        "quan sát",
+        "quét",
+        "nhìn"
+    },
+
+    [[
 Sử dụng dữ liệu scanner.
-Không bịa ra entity.
-So sánh các quan sát mới với memory.
-]])
+Không bịa entity.
+So sánh quan sát mới với quan sát cũ.
+]],
 
-registerSkill("navigate", "Điều hướng và tìm đường.", {"go", "move", "follow", "đi", "theo", "di chuyển"}, [[
+    function(context)
+
+        scanWorld()
+
+        return {
+            success = true,
+            message =
+                observationText()
+        }
+
+    end
+)
+
+registerSkill(
+
+    "navigate",
+
+    "Điều hướng.",
+
+    {
+        "go",
+        "move",
+        "navigate",
+        "follow",
+        "đi",
+        "theo",
+        "di chuyển"
+    },
+
+    [[
 Ưu tiên pathfinding.
 Nếu đường thất bại thì tính lại.
-Nếu mục tiêu quá xa thì xử lý khoảng cách.
-]])
+Nếu mục tiêu quá xa thì recover.
+]],
 
-registerSkill("explain", "Giải thích khái niệm.", {"explain", "why", "what", "giải thích", "tại sao", "là gì"}, [[
-Giải thích rõ ràng.
-Không cố tỏ ra chắc chắn nếu không biết.
+    function(context)
+
+        if Agent.Root then
+
+            Agent.Following = true
+
+            return {
+                success = true,
+                message =
+                    "Navigation mode đã được kích hoạt."
+            }
+
+        end
+
+        return {
+            success = false,
+            message =
+                "Không tìm thấy Root."
+        }
+
+    end
+)
+
+registerSkill(
+
+    "explain",
+
+    "Giải thích.",
+
+    {
+        "explain",
+        "why",
+        "what",
+        "giải thích",
+        "tại sao",
+        "là gì"
+    },
+
+    [[
+Giải thích rõ.
+Không giả vờ chắc chắn.
 Đi từ đơn giản đến nâng cao.
-]])
+]],
 
-registerSkill("planner", "Lập kế hoạch nhiều bước.", {"plan", "planning", "kế hoạch", "lập kế hoạch"}, [[
+    function(context)
+
+        return {
+            success = true,
+            message =
+                "Explain skill đã được kích hoạt."
+        }
+
+    end
+)
+
+registerSkill(
+
+    "planner",
+
+    "Lập kế hoạch.",
+
+    {
+        "plan",
+        "planning",
+        "kế hoạch",
+        "lập kế hoạch"
+    },
+
+    [[
 Xác định mục tiêu.
-Chia nhỏ nhiệm vụ.
+Chia nhiệm vụ.
 Xác định thứ tự.
 Theo dõi tiến độ.
-Điều chỉnh kế hoạch khi dữ liệu thay đổi.
-]])
+Điều chỉnh khi dữ liệu thay đổi.
+]],
 
---==================================================
+    function(context)
+
+        return {
+            success = true,
+            message =
+                "Planner skill đã được kích hoạt."
+        }
+
+    end
+)
+
+--============================================================
 -- SKILL SELECTION
---==================================================
+--============================================================
 
 local function selectSkill(message)
-    local lower = string.lower(message or "")
-    local best, bestScore = nil, 0
-    for name, skill in pairs(Agent.Skills) do
+
+    local lower =
+        normalize(message)
+
+    local best = nil
+
+    local bestScore = 0
+
+    for _, skill in pairs(Agent.Skills) do
+
         local score = 0
+
         for _, trigger in ipairs(skill.Triggers) do
-            if string.find(lower, string.lower(trigger), 1, true) then
+
+            if string.find(
+                lower,
+                normalize(trigger),
+                1,
+                true
+            ) then
+
                 score += 1
             end
         end
+
         if score > bestScore then
+
             bestScore = score
+
             best = skill
+
         end
     end
-    return best
+
+    return best, bestScore
 end
 
---==================================================
+--============================================================
+-- WORLD MODEL
+--============================================================
+
+local World = {
+
+    Players = {},
+
+    NPCs = {},
+
+    Environment = {
+
+        Parts = 0,
+
+        Humanoids = 0
+    },
+
+    CurrentArea = "unknown",
+
+    LastUpdate = 0
+}
+
+Agent.World = World
+
+--============================================================
 -- WORLD SCANNER
---==================================================
+--============================================================
 
-local function scanWorld()
-    if not Agent.Root then return end
-    local result = {}
-    local origin = Agent.Root.Position
+function scanWorld()
 
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player \~= LocalPlayer then
-            local character = player.Character
-            local root = getRoot(character)
-            if root then
-                local d = (root.Position - origin).Magnitude
-                if d <= CONFIG.Agent.ScanDistance then
-                    local humanoid = getHumanoid(character)
-                    table.insert(result, {
-                        type = "player",
-                        name = player.Name,
-                        displayName = player.DisplayName,
-                        distance = math.floor(d),
-                        health = humanoid and math.floor(humanoid.Health) or 0
-                    })
-                end
-            end
-        end
-    end
-
-    local parts, humanoids = 0, 0
-    local ok, objects = pcall(function()
-        return Workspace:GetPartBoundsInRadius(origin, CONFIG.Agent.ScanDistance)
-    end)
-
-    if ok and objects then
-        for _, object in ipairs(objects) do
-            if object:IsA("BasePart") then
-                parts += 1
-                local model = object:FindFirstAncestorOfClass("Model")
-                if model and model:FindFirstChildOfClass("Humanoid") then
-                    humanoids += 1
-                end
-            end
-        end
-    end
-
-    table.insert(result, { type = "environment", parts = parts, humanoids = humanoids })
-    Agent.Observations = result
-
-    while #Agent.Observations > CONFIG.Agent.ObservationLimit do
-        table.remove(Agent.Observations, 1)
-    end
-end
-
-local function observationText()
-    local result = {}
-    for _, item in ipairs(Agent.Observations) do
-        if item.type == "player" then
-            table.insert(result, string.format("Player %s (%s): %dst, HP %d", item.name, item.displayName, item.distance, item.health))
-        elseif item.type == "environment" then
-            table.insert(result, string.format("Environment: %d parts, %d humanoid models", item.parts, item.humanoids))
-        end
-    end
-    return table.concat(result, "\n")
-end
-
---==================================================
--- BRAIN REGISTRY (đăng ký + heartbeat)
---==================================================
-
-local function sendBrainRequest(path, payload)
-    if not CONFIG.Remote.BrainRegistry or not CONFIG.Remote.BrainRegistry.Enabled or not HTTP then
-        return false
-    end
-
-    local ok, encoded = pcall(function()
-        return HttpService:JSONEncode(payload)
-    end)
-    if not ok then return false end
-
-    local success = false
-    pcall(function()
-        local response = HTTP({
-            Url = CONFIG.Remote.BaseURL .. path,
-            Method = "POST",
-            Headers = {
-                ["Content-Type"] = "application/json",
-                ["X-Brain-Secret"] = CONFIG.Remote.BrainRegistry.Secret
-            },
-            Body = encoded
-        })
-        if response and tonumber(response.StatusCode) and response.StatusCode >= 200 and response.StatusCode < 300 then
-            success = true
-        end
-    end)
-    return success
-end
-
-local function getActiveSkillsList()
-    local list = {}
-    for name in pairs(Agent.Skills) do
-        table.insert(list, name)
-    end
-    return list
-end
-
-local function registerBrain()
-    local payload = {
-        brainId = Agent.BrainId,
-        userId = tostring(LocalPlayer.UserId),
-        displayName = LocalPlayer.DisplayName,
-        originalName = LocalPlayer.Name,
-        createdAt = os.time() * 1000,
-        brainVersion = "4.0",
-        skills = getActiveSkillsList()
-    }
-    local ok = sendBrainRequest(CONFIG.Remote.BrainRegistry.RegisterPath, payload)
-    if ok then
-        remember("system", "Brain registered to Registry: " .. Agent.BrainId)
-    end
-    return ok
-end
-
-local function heartbeatBrain()
-    local payload = {
-        brainId = Agent.BrainId,
-        status = "online",
-        brainVersion = "4.0",
-        activeSkills = getActiveSkillsList(),
-        lastSeen = os.time() * 1000
-    }
-    sendBrainRequest(CONFIG.Remote.BrainRegistry.HeartbeatPath, payload)
-end
-
---==================================================
--- GUI
---==================================================
-
-local GUI = Instance.new("ScreenGui")
-GUI.Name = "AstraAgentV4"
-GUI.ResetOnSpawn = false
-GUI.IgnoreGuiInset = true
-GUI.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-
-pcall(function() GUI.Parent = CoreGui end)
-if not GUI.Parent then
-    GUI.Parent = LocalPlayer:WaitForChild("PlayerGui")
-end
-
-local Main = Instance.new("Frame")
-Main.Size = UDim2.fromOffset(360, 500)
-Main.Position = UDim2.new(0.5, -180, 0.5, -250)
-Main.BackgroundColor3 = Color3.fromRGB(17, 17, 23)
-Main.BorderSizePixel = 0
-Main.Active = true
-Main.Parent = GUI
-
-local MainCorner = Instance.new("UICorner")
-MainCorner.CornerRadius = UDim.new(0, 14)
-MainCorner.Parent = Main
-
-local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, -100, 0, 38)
-Title.Position = UDim2.fromOffset(14, 2)
-Title.BackgroundTransparency = 1
-Title.Text = "🤖 Astra Agent"
-Title.TextColor3 = Color3.new(1, 1, 1)
-Title.TextSize = 18
-Title.Font = Enum.Font.GothamBold
-Title.TextXAlignment = Enum.TextXAlignment.Left
-Title.Parent = Main
-
-local Close = Instance.new("TextButton")
-Close.Size = UDim2.fromOffset(36, 36)
-Close.Position = UDim2.new(1, -42, 0, 3)
-Close.BackgroundTransparency = 1
-Close.Text = "×"
-Close.TextSize = 28
-Close.TextColor3 = Color3.fromRGB(255, 90, 90)
-Close.Parent = Main
-
-local Status = Instance.new("TextLabel")
-Status.Size = UDim2.new(1, -28, 0, 22)
-Status.Position = UDim2.fromOffset(14, 39)
-Status.BackgroundTransparency = 1
-Status.Text = "● Agent Online"
-Status.TextColor3 = Color3.fromRGB(100, 255, 150)
-Status.TextSize = 11
-Status.Font = Enum.Font.Gotham
-Status.TextXAlignment = Enum.TextXAlignment.Left
-Status.Parent = Main
-
-local Chat = Instance.new("ScrollingFrame")
-Chat.Size = UDim2.new(1, -28, 1, -145)
-Chat.Position = UDim2.fromOffset(14, 66)
-Chat.BackgroundColor3 = Color3.fromRGB(10, 10, 14)
-Chat.BorderSizePixel = 0
-Chat.ScrollBarThickness = 3
-Chat.AutomaticCanvasSize = Enum.AutomaticSize.Y
-Chat.CanvasSize = UDim2.new()
-Chat.Parent = Main
-
-local ChatCorner = Instance.new("UICorner")
-ChatCorner.CornerRadius = UDim.new(0, 10)
-ChatCorner.Parent = Chat
-
-local Layout = Instance.new("UIListLayout")
-Layout.Padding = UDim.new(0, 6)
-Layout.Parent = Chat
-
-local ChatPadding = Instance.new("UIPadding")
-ChatPadding.PaddingTop = UDim.new(0, 8)
-ChatPadding.PaddingBottom = UDim.new(0, 8)
-ChatPadding.PaddingLeft = UDim.new(0, 8)
-ChatPadding.PaddingRight = UDim.new(0, 8)
-ChatPadding.Parent = Chat
-
-local Input = Instance.new("TextBox")
-Input.Size = UDim2.new(1, -84, 0, 42)
-Input.Position = UDim2.new(0, 14, 1, -57)
-Input.BackgroundColor3 = Color3.fromRGB(29, 29, 38)
-Input.BorderSizePixel = 0
-Input.PlaceholderText = "Chat hoặc /command..."
-Input.PlaceholderColor3 = Color3.fromRGB(130, 130, 140)
-Input.TextColor3 = Color3.new(1, 1, 1)
-Input.TextSize = 13
-Input.Font = Enum.Font.Gotham
-Input.ClearTextOnFocus = false
-Input.TextWrapped = true
-Input.Parent = Main
-
-local InputCorner = Instance.new("UICorner")
-InputCorner.CornerRadius = UDim.new(0, 10)
-InputCorner.Parent = Input
-
-local Send = Instance.new("TextButton")
-Send.Size = UDim2.fromOffset(58, 42)
-Send.Position = UDim2.new(1, -72, 1, -57)
-Send.BackgroundColor3 = Color3.fromRGB(65, 105, 255)
-Send.BorderSizePixel = 0
-Send.Text = "➤"
-Send.TextColor3 = Color3.new(1, 1, 1)
-Send.TextSize = 19
-Send.Font = Enum.Font.GothamBold
-Send.Parent = Main
-
-local SendCorner = Instance.new("UICorner")
-SendCorner.CornerRadius = UDim.new(0, 10)
-SendCorner.Parent = Send
-
-local function addMessage(author, text, color)
-    local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(1, -12, 0, 0)
-    label.AutomaticSize = Enum.AutomaticSize.Y
-    label.BackgroundTransparency = 1
-    label.Text = author .. ": " .. tostring(text)
-    label.TextColor3 = color or Color3.new(1, 1, 1)
-    label.TextSize = 12
-    label.Font = Enum.Font.Gotham
-    label.TextWrapped = true
-    label.TextXAlignment = Enum.TextXAlignment.Left
-    label.Parent = Chat
-
-    task.defer(function()
-        pcall(function()
-            Chat.CanvasPosition = Vector2.new(0, Chat.AbsoluteCanvasSize.Y)
-        end)
-    end)
-end
-
---==================================================
--- DRAG
---==================================================
-
-do
-    local dragging, dragStart, startPosition = false, nil, nil
-
-    Title.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = true
-            dragStart = input.Position
-            startPosition = Main.Position
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
-                    dragging = false
-                end
-            end)
-        end
-    end)
-
-    UserInputService.InputChanged:Connect(function(input)
-        if not dragging then return end
-        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-            local delta = input.Position - dragStart
-            Main.Position = UDim2.new(
-                startPosition.X.Scale, startPosition.X.Offset + delta.X,
-                startPosition.Y.Scale, startPosition.Y.Offset + delta.Y
-            )
-        end
-    end)
-end
-
---==================================================
--- BUBBLE THOUGHT
---==================================================
-
-local function thoughtBubble(text, duration)
-    if not Agent.Clone then return end
-    local head = Agent.Clone:FindFirstChild("Head") or Agent.CloneRoot
-    if not head then return end
-
-    local old = head:FindFirstChild("AstraThought")
-    if old then destroy(old) end
-
-    text = clampText(text, 220)
-    duration = duration or math.clamp(2 + (#text / 17), 2, 14)
-
-    local bubble = Instance.new("BillboardGui")
-    bubble.Name = "AstraThought"
-    bubble.Adornee = head
-    bubble.Size = UDim2.fromOffset(290, 90)
-    bubble.StudsOffset = Vector3.new(0, 3.5, 0)
-    bubble.AlwaysOnTop = true
-    bubble.MaxDistance = 100
-    bubble.Parent = head
-
-    local frame = Instance.new("Frame")
-    frame.Size = UDim2.fromScale(1, 1)
-    frame.BackgroundColor3 = Color3.fromRGB(20, 20, 27)
-    frame.BackgroundTransparency = 0.08
-    frame.Parent = bubble
-
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 12)
-    corner.Parent = frame
-
-    local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(1, -14, 1, -10)
-    label.Position = UDim2.fromOffset(7, 5)
-    label.BackgroundTransparency = 1
-    label.Text = "💭 " .. text
-    label.TextColor3 = Color3.new(1, 1, 1)
-    label.TextSize = 12
-    label.Font = Enum.Font.Gotham
-    label.TextWrapped = true
-    label.Parent = frame
-
-    Agent.CurrentThought = text
-
-    task.delay(duration, function()
-        if bubble and bubble.Parent then destroy(bubble) end
-    end)
-end
-
---==================================================
--- CLONE
---==================================================
-
-local function createClone()
-    if not Agent.Character then return end
-    Agent.Character.Archivable = true
-
-    local clone
-    local ok = pcall(function()
-        clone = Agent.Character:Clone()
-    end)
-    if not ok or not clone then return end
-
-    clone.Name = "Astra_AI_Clone"
-
-    for _, object in ipairs(clone:GetDescendants()) do
-        if object:IsA("Script") or object:IsA("LocalScript") or object:IsA("ModuleScript") or object:IsA("Tool") then
-            destroy(object)
-        elseif object:IsA("BasePart") then
-            object.CanCollide = false
-            object.CanTouch = false
-            object.Massless = true
-        end
-    end
-
-    local humanoid = getHumanoid(clone)
-    if humanoid then
-        humanoid.DisplayName = CONFIG.Agent.Name
-        humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.Viewer
-        humanoid.BreakJointsOnDeath = false
-    end
-
-    local root = getRoot(clone)
-    if not root then
-        destroy(clone)
+    if not Agent.Root then
         return
     end
 
-    clone.Parent = Workspace
-    Agent.Clone = clone
-    Agent.CloneRoot = root
-    Agent.CloneHumanoid = humanoid
+    local result = {}
+
+    local origin =
+        Agent.Root.Position
+
+    -- PLAYERS
+
+    for _, player in ipairs(
+        Players:GetPlayers()
+    ) do
+
+        if player ~= LocalPlayer then
+
+            local character =
+                player.Character
+
+            local root =
+                getRoot(character)
+
+            if root then
+
+                local distance =
+                    (
+                        root.Position
+                        - origin
+                    ).Magnitude
+
+                if distance <=
+                    CONFIG.Agent.ScanDistance then
+
+                    local humanoid =
+                        getHumanoid(character)
+
+                    table.insert(
+                        result,
+                        {
+
+                            type = "player",
+
+                            name =
+                                player.Name,
+
+                            displayName =
+                                player.DisplayName,
+
+                            distance =
+                                math.floor(
+                                    distance
+                                ),
+
+                            health =
+                                humanoid
+                                and math.floor(
+                                    humanoid.Health
+                                )
+                                or 0
+                        }
+                    )
+                end
+            end
+        end
+    end
+
+    -- WORLD PARTS
+
+    local parts = 0
+
+    local humanoids = 0
+
+    local ok, objects =
+        pcall(function()
+
+            return Workspace:
+                GetPartBoundsInRadius(
+                    origin,
+                    CONFIG.Agent.ScanDistance
+                )
+
+        end)
+
+    if ok and objects then
+
+        for i, object in ipairs(objects) do
+
+            if i >
+                CONFIG.World.MaxParts then
+
+                break
+            end
+
+            if object:IsA("BasePart") then
+
+                parts += 1
+
+                local model =
+                    object:
+                    FindFirstAncestorOfClass(
+                        "Model"
+                    )
+
+                if model and
+                    model:FindFirstChildOfClass(
+                        "Humanoid"
+                    ) then
+
+                    humanoids += 1
+
+                end
+            end
+        end
+    end
+
+    table.insert(
+        result,
+        {
+
+            type = "environment",
+
+            parts = parts,
+
+            humanoids = humanoids
+        }
+    )
+
+    -- CHANGE DETECTION
+
+    Agent.PreviousObservations =
+        Agent.Observations
+
+    Agent.Observations = result
+
+    World.Players = {}
+
+    for _, item in ipairs(result) do
+
+        if item.type == "player" then
+
+            World.Players[item.name] =
+                item
+
+        end
+    end
+
+    World.Environment = {
+
+        Parts = parts,
+
+        Humanoids = humanoids
+    }
+
+    World.LastUpdate = os.time()
+
+    if CONFIG.Brain.EnableEventMemory then
+
+        detectWorldChanges(
+            Agent.PreviousObservations,
+            Agent.Observations
+        )
+
+    end
 end
 
-createClone()
+--============================================================
+-- WORLD TEXT
+--============================================================
 
---==================================================
+function observationText()
+
+    local result = {}
+
+    for _, item in ipairs(
+        Agent.Observations
+    ) do
+
+        if item.type == "player" then
+
+            table.insert(
+                result,
+
+                string.format(
+                    "Player %s (%s): %dst, HP %d",
+                    item.name,
+                    item.displayName,
+                    item.distance,
+                    item.health
+                )
+            )
+
+        elseif item.type == "environment" then
+
+            table.insert(
+                result,
+
+                string.format(
+                    "Environment: %d parts, %d humanoid models",
+                    item.parts,
+                    item.humanoids
+                )
+            )
+        end
+    end
+
+    return table.concat(
+        result,
+        "\n"
+    )
+end
+
+--============================================================
+-- WORLD EVENT DETECTION
+--============================================================
+
+function addEvent(text, importance)
+
+    if not text or text == "" then
+        return
+    end
+
+    table.insert(
+        Agent.Events,
+        {
+
+            text = text,
+
+            importance =
+                importance or 0.6,
+
+            time = os.time()
+        }
+    )
+
+    while #Agent.Events >
+        CONFIG.Agent.EventLimit do
+
+        table.remove(
+            Agent.Events,
+            1
+        )
+
+    end
+
+    remember(
+        "event",
+        text,
+        importance or 0.6
+    )
+end
+
+function detectWorldChanges(
+    oldData,
+    newData
+)
+
+    local oldPlayers = {}
+
+    local newPlayers = {}
+
+    for _, item in ipairs(
+        oldData or {}
+    ) do
+
+        if item.type == "player" then
+            oldPlayers[item.name] = item
+        end
+    end
+
+    for _, item in ipairs(
+        newData or {}
+    ) do
+
+        if item.type == "player" then
+            newPlayers[item.name] = item
+        end
+    end
+
+    for name, item in pairs(
+        newPlayers
+    ) do
+
+        if not oldPlayers[name] then
+
+            addEvent(
+                "Player " ..
+                name ..
+                " xuất hiện trong vùng quan sát.",
+                0.65
+            )
+
+        end
+    end
+
+    for name in pairs(
+        oldPlayers
+    ) do
+
+        if not newPlayers[name] then
+
+            addEvent(
+                "Player " ..
+                name ..
+                " rời vùng quan sát.",
+                0.55
+            )
+
+        end
+    end
+end
+
+local function recentEventsText()
+
+    local result = {}
+
+    local startIndex =
+        math.max(
+            1,
+            #Agent.Events
+                - CONFIG.Brain.MaxRecentEvents
+                + 1
+        )
+
+    for i = startIndex,
+        #Agent.Events do
+
+        local event =
+            Agent.Events[i]
+
+        table.insert(
+            result,
+            event.text
+        )
+    end
+
+    return table.concat(
+        result,
+        "\n"
+    )
+end
+
+--============================================================
+-- ACTION SYSTEM
+--============================================================
+
+local Actions = {}
+
+Actions.FOLLOW = function()
+
+    Agent.Following = true
+
+    return true,
+        "Follow enabled."
+end
+
+Actions.STOP = function()
+
+    Agent.Following = false
+
+    stopMovement()
+
+    return true,
+        "Follow stopped."
+end
+
+Actions.SCAN = function()
+
+    scanWorld()
+
+    return true,
+        observationText()
+end
+
+Actions.THINK = function()
+
+    return true,
+        "Thinking completed."
+end
+
+Actions.REMEMBER = function(
+    text
+)
+
+    remember(
+        "user",
+        text,
+        0.8
+    )
+
+    return true,
+        "Đã ghi nhớ."
+end
+
+local function executeAction(
+    action,
+    data
+)
+
+    action =
+        string.upper(
+            tostring(action or "")
+        )
+
+    local fn =
+        Actions[action]
+
+    if not fn then
+
+        return false,
+            "Unknown action: " ..
+            action
+    end
+
+    local ok, success, result =
+        pcall(
+            fn,
+            data
+        )
+
+    if not ok then
+
+        Agent.StateError =
+            tostring(success)
+
+        return false,
+            "Action error."
+    end
+
+    Agent.CurrentAction =
+        action
+
+    BrainState.LastActionResult =
+        result
+
+    return success,
+        result
+end
+
+--============================================================
 -- PATHFINDING
---==================================================
+--============================================================
 
-local function stopMovement()
+function stopMovement()
+
     Agent.PathId += 1
+
     Agent.Moving = false
+
     Agent.CurrentGoal = nil
+
     if Agent.CloneHumanoid then
-        pcall(function() Agent.CloneHumanoid:Move(Vector3.zero) end)
+
+        pcall(function()
+
+            Agent.CloneHumanoid:
+                Move(Vector3.zero)
+
+        end)
     end
 end
 
 local function teleportToPlayer()
-    if not Agent.Root or not Agent.Clone then return end
-    local target = Agent.Root.CFrame * CFrame.new(0, 0, CONFIG.Agent.FollowDistance)
-    pcall(function() Agent.Clone:PivotTo(target) end)
+
+    if not Agent.Root
+        or not Agent.Clone then
+
+        return
+    end
+
+    local target =
+        Agent.Root.CFrame
+        * CFrame.new(
+            0,
+            0,
+            CONFIG.Agent.FollowDistance
+        )
+
+    pcall(function()
+
+        Agent.Clone:
+            PivotTo(target)
+
+    end)
 end
 
-local function navigate(destination)
-    if not Agent.CloneRoot or not Agent.CloneHumanoid or not destination then return false end
+local function navigate(
+    destination
+)
 
-    Agent.PathId += 1
-    local id = Agent.PathId
-    Agent.Moving = true
-    Agent.CurrentGoal = destination
+    if not Agent.CloneRoot
+        or not Agent.CloneHumanoid
+        or not destination then
 
-    local path
-    local ok = pcall(function()
-        path = PathfindingService:CreatePath({
-            AgentRadius = CONFIG.Movement.AgentRadius,
-            AgentHeight = CONFIG.Movement.AgentHeight,
-            AgentCanJump = CONFIG.Movement.AgentCanJump,
-            AgentCanClimb = CONFIG.Movement.AgentCanClimb,
-            WaypointSpacing = CONFIG.Movement.WaypointSpacing
-        })
-        path:ComputeAsync(Agent.CloneRoot.Position, destination)
-    end)
-
-    if not ok or not path or path.Status \~= Enum.PathStatus.Success then
-        Agent.Moving = false
-        pcall(function() Agent.CloneHumanoid:MoveTo(destination) end)
         return false
     end
 
-    local waypoints = path:GetWaypoints()
-    for _, waypoint in ipairs(waypoints) do
-        if not Agent.Alive or id \~= Agent.PathId then break end
-        if waypoint.Action == Enum.PathWaypointAction.Jump then
-            Agent.CloneHumanoid.Jump = true
-        end
-        pcall(function() Agent.CloneHumanoid:MoveTo(waypoint.Position) end)
+    Agent.PathId += 1
 
-        local reached = false
-        local connection = Agent.CloneHumanoid.MoveToFinished:Connect(function(success)
-            reached = success
+    local pathId =
+        Agent.PathId
+
+    Agent.Moving = true
+
+    Agent.CurrentGoal =
+        destination
+
+    local path
+
+    local ok =
+        pcall(function()
+
+            path =
+                PathfindingService:
+                CreatePath({
+
+                    AgentRadius =
+                        CONFIG.Movement.AgentRadius,
+
+                    AgentHeight =
+                        CONFIG.Movement.AgentHeight,
+
+                    AgentCanJump =
+                        CONFIG.Movement.AgentCanJump,
+
+                    AgentCanClimb =
+                        CONFIG.Movement.AgentCanClimb,
+
+                    WaypointSpacing =
+                        CONFIG.Movement.WaypointSpacing
+                })
+
+            path:
+                ComputeAsync(
+                    Agent.CloneRoot.Position,
+                    destination
+                )
         end)
 
-        local started = tick()
-        while tick() - started < 2.5 do
-            if not Agent.Alive or id \~= Agent.PathId or not Agent.CloneRoot then break end
-            if (Agent.CloneRoot.Position - waypoint.Position).Magnitude < 3 then
-                reached = true
-                break
-            end
-            if reached then break end
-            task.wait(0.08)
-        end
-        if connection then connection:Disconnect() end
-        if not reached then break end
+    if not ok
+        or not path
+        or path.Status ~=
+            Enum.PathStatus.Success then
+
+        Agent.Moving = false
+
+        pcall(function()
+
+            Agent.CloneHumanoid:
+                MoveTo(destination)
+
+        end)
+
+        return false
     end
 
-    if id == Agent.PathId then Agent.Moving = false end
+    local waypoints =
+        path:GetWaypoints()
+
+    for _, waypoint in ipairs(
+        waypoints
+    ) do
+
+        if not Agent.Alive
+            or pathId ~=
+                Agent.PathId then
+
+            break
+        end
+
+        if waypoint.Action ==
+            Enum.PathWaypointAction.Jump then
+
+            Agent.CloneHumanoid.Jump =
+                true
+        end
+
+        pcall(function()
+
+            Agent.CloneHumanoid:
+                MoveTo(
+                    waypoint.Position
+                )
+
+        end)
+
+        local reached = false
+
+        local connection =
+            Agent.CloneHumanoid
+            .MoveToFinished
+            :Connect(function(success)
+
+                reached = success
+
+            end)
+
+        local started =
+            tick()
+
+        while tick() - started < 2.5 do
+
+            if not Agent.Alive
+                or pathId ~=
+                    Agent.PathId
+                or not Agent.CloneRoot then
+
+                break
+            end
+
+            if (
+                Agent.CloneRoot.Position
+                - waypoint.Position
+            ).Magnitude < 3 then
+
+                reached = true
+
+                break
+            end
+
+            if reached then
+                break
+            end
+
+            task.wait(0.08)
+        end
+
+        if connection then
+            connection:Disconnect()
+        end
+
+        if not reached then
+            break
+        end
+    end
+
+    if pathId ==
+        Agent.PathId then
+
+        Agent.Moving = false
+
+    end
+
     return true
 end
 
 local function follow()
-    if not Agent.Root or not Agent.CloneRoot then return end
-    local d = dist(Agent.CloneRoot, Agent.Root)
 
-    if d > CONFIG.Agent.TeleportDistance then
-        remember("navigation", "AI was too far away and returned.")
-        thoughtBubble("Tôi đi hơi xa. Tôi sẽ quay lại.")
+    if not Agent.Root
+        or not Agent.CloneRoot then
+
+        return
+    end
+
+    local distance =
+        dist(
+            Agent.CloneRoot,
+            Agent.Root
+        )
+
+    if distance >
+        CONFIG.Agent.TeleportDistance then
+
+        addEvent(
+            "Astra quá xa người chơi và đang recover.",
+            0.75
+        )
+
+        thoughtBubble(
+            "Tôi đi hơi xa. Đang quay lại."
+        )
+
         teleportToPlayer()
+
         return
     end
 
-    if d <= CONFIG.Agent.StopDistance then
+    if distance <=
+        CONFIG.Agent.StopDistance then
+
         stopMovement()
+
         return
     end
 
-    if tick() - Agent.LastPath < CONFIG.Movement.Recalculate then return end
-    Agent.LastPath = tick()
+    if tick() -
+        Agent.LastPath <
+        CONFIG.Movement.Recalculate then
 
-    local target = Agent.Root.Position - Agent.Root.CFrame.LookVector * CONFIG.Agent.FollowDistance
-    task.spawn(function() navigate(target) end)
+        return
+    end
+
+    Agent.LastPath =
+        tick()
+
+    local target =
+        Agent.Root.Position
+        -
+        Agent.Root.CFrame.LookVector
+        *
+        CONFIG.Agent.FollowDistance
+
+    task.spawn(function()
+
+        navigate(target)
+
+    end)
 end
 
---==================================================
--- COMMAND SYSTEM
---==================================================
+--============================================================
+-- CLONE
+--============================================================
 
-local function setLanguage(language)
-    if not language or language == "" then return "Ngôn ngữ không hợp lệ." end
-    CONFIG.Agent.Language = language
-    remember("preference", "Language = " .. language)
-    return "Đã đổi ngôn ngữ AI sang: " .. language
+local function createClone()
+
+    if not Agent.Character then
+        return
+    end
+
+    Agent.Character.Archivable =
+        true
+
+    local clone
+
+    local ok =
+        pcall(function()
+
+            clone =
+                Agent.Character:Clone()
+
+        end)
+
+    if not ok or not clone then
+        return
+    end
+
+    clone.Name =
+        "Astra_AI_Clone"
+
+    for _, object in ipairs(
+        clone:GetDescendants()
+    ) do
+
+        if object:IsA("Script")
+            or object:IsA("LocalScript")
+            or object:IsA("ModuleScript")
+            or object:IsA("Tool") then
+
+            destroy(object)
+
+        elseif object:IsA("BasePart") then
+
+            object.CanCollide = false
+
+            object.CanTouch = false
+
+            object.Massless = true
+        end
+    end
+
+    local humanoid =
+        getHumanoid(clone)
+
+    if humanoid then
+
+        humanoid.DisplayName =
+            CONFIG.Agent.Name
+
+        humanoid.DisplayDistanceType =
+            Enum.HumanoidDisplayDistanceType.Viewer
+
+        humanoid.BreakJointsOnDeath =
+            false
+    end
+
+    local root =
+        getRoot(clone)
+
+    if not root then
+
+        destroy(clone)
+
+        return
+    end
+
+    clone.Parent =
+        Workspace
+
+    Agent.Clone =
+        clone
+
+    Agent.CloneRoot =
+        root
+
+    Agent.CloneHumanoid =
+        humanoid
 end
 
-local function setPersonality(text)
-    CONFIG.Agent.Personality = tostring(text)
-    remember("preference", "Personality = " .. text)
-    return "Đã thay đổi tính cách."
+--============================================================
+-- THOUGHT BUBBLE
+--============================================================
+
+function thoughtBubble(
+    text,
+    duration
+)
+
+    if not Agent.Clone then
+        return
+    end
+
+    local head =
+        Agent.Clone:
+        FindFirstChild("Head")
+        or Agent.CloneRoot
+
+    if not head then
+        return
+    end
+
+    local old =
+        head:FindFirstChild(
+            "AstraThought"
+        )
+
+    if old then
+        destroy(old)
+    end
+
+    text =
+        clampText(
+            text,
+            220
+        )
+
+    duration =
+        duration
+        or math.clamp(
+            2 + (#text / 17),
+            2,
+            14
+        )
+
+    local bubble =
+        Instance.new(
+            "BillboardGui"
+        )
+
+    bubble.Name =
+        "AstraThought"
+
+    bubble.Adornee =
+        head
+
+    bubble.Size =
+        UDim2.fromOffset(
+            280,
+            80
+        )
+
+    bubble.StudsOffset =
+        Vector3.new(
+            0,
+            3.2,
+            0
+        )
+
+    bubble.AlwaysOnTop =
+        true
+
+    bubble.MaxDistance =
+        100
+
+    bubble.Parent =
+        head
+
+    local frame =
+        Instance.new("Frame")
+
+    frame.Size =
+        UDim2.fromScale(
+            1,
+            1
+        )
+
+    frame.BackgroundColor3 =
+        Color3.fromRGB(
+            20,
+            20,
+            27
+        )
+
+    frame.BackgroundTransparency =
+        0.1
+
+    frame.Parent =
+        bubble
+
+    local corner =
+        Instance.new(
+            "UICorner"
+        )
+
+    corner.CornerRadius =
+        UDim.new(
+            0,
+            10
+        )
+
+    corner.Parent =
+        frame
+
+    local label =
+        Instance.new(
+            "TextLabel"
+        )
+
+    label.Size =
+        UDim2.new(
+            1,
+            -12,
+            1,
+            -8
+        )
+
+    label.Position =
+        UDim2.fromOffset(
+            6,
+            4
+        )
+
+    label.BackgroundTransparency =
+        1
+
+    label.Text =
+        "💭 " .. text
+
+    label.TextColor3 =
+        Color3.new(
+            1,
+            1,
+            1
+        )
+
+    label.TextSize =
+        12
+
+    label.Font =
+        Enum.Font.Gotham
+
+    label.TextWrapped =
+        true
+
+    label.Parent =
+        frame
+
+    Agent.CurrentThought =
+        text
+
+    task.delay(
+        duration,
+        function()
+
+            if bubble
+                and bubble.Parent then
+
+                destroy(bubble)
+
+            end
+        end
+    )
 end
 
-local function setStyle(text)
-    CONFIG.Agent.Style = tostring(text)
-    remember("preference", "Style = " .. text)
-    return "Đã thay đổi phong cách trả lời."
-end
+--============================================================
+-- PROFILE
+--============================================================
 
-local function createCustomSkill(name, description, instructions)
-    name = string.lower(tostring(name or ""))
-    if name == "" then return false end
-    registerSkill(name, description or "Custom skill", {}, instructions or "")
-    remember("skill", "Created skill: " .. name)
-    return true
+local function getSkillCount()
+
+    local count = 0
+
+    for _ in pairs(
+        Agent.Skills
+    ) do
+
+        count += 1
+
+    end
+
+    return count
 end
 
 local function profileText()
-    local skillCount = 0
-    for _ in pairs(Agent.Skills) do skillCount += 1 end
+
     return table.concat({
-        "Name: " .. CONFIG.Agent.Name,
-        "Language: " .. CONFIG.Agent.Language,
-        "Personality: " .. CONFIG.Agent.Personality,
-        "Style: " .. CONFIG.Agent.Style,
-        "Initiative: " .. tostring(CONFIG.Agent.Initiative),
-        "Creativity: " .. tostring(CONFIG.Agent.Creativity),
-        "Memory: " .. tostring(#Agent.Memory),
-        "Skills: " .. tostring(skillCount),
-        "BrainId: " .. tostring(Agent.BrainId)
+
+        "Name: " ..
+            CONFIG.Agent.Name,
+
+        "Language: " ..
+            CONFIG.Agent.Language,
+
+        "Personality: " ..
+            CONFIG.Agent.Personality,
+
+        "Style: " ..
+            CONFIG.Agent.Style,
+
+        "Memory: " ..
+            tostring(#Agent.Memory),
+
+        "Events: " ..
+            tostring(#Agent.Events),
+
+        "Learned Rules: " ..
+            tostring(#Agent.LearnedRules),
+
+        "Skills: " ..
+            tostring(getSkillCount()),
+
+        "Intent: " ..
+            tostring(
+                BrainState.LastIntent
+                or "none"
+            ),
+
+        "Goal: " ..
+            tostring(
+                Agent.CurrentGoal
+                or "none"
+            ),
+
+        "Action: " ..
+            tostring(
+                Agent.CurrentAction
+                or "none"
+            ),
+
+        "Confidence: " ..
+            string.format(
+                "%.2f",
+                BrainState.Confidence
+            ),
+
+        "Remote: " ..
+            tostring(
+                Agent.RemoteAvailable
+            ),
+
+        "BrainId: " ..
+            tostring(
+                Agent.BrainId
+            )
+
     }, "\n")
 end
 
+--============================================================
+-- INTENT ENGINE
+--============================================================
+
+local function detectIntent(message)
+
+    local t =
+        normalize(message)
+
+    if contains(
+        t,
+        {
+            "theo anh",
+            "follow",
+            "đi theo",
+            "theo tôi"
+        }
+    ) then
+        return "follow"
+    end
+
+    if contains(
+        t,
+        {
+            "dừng",
+            "stop",
+            "đứng yên",
+            "ngừng theo"
+        }
+    ) then
+        return "stop"
+    end
+
+    if contains(
+        t,
+        {
+            "quét",
+            "scan",
+            "quan sát",
+            "nhìn xung quanh",
+            "có ai không"
+        }
+    ) then
+        return "scan"
+    end
+
+    if contains(
+        t,
+        {
+            "bạn là ai",
+            "cậu là ai",
+            "who are you",
+            "giới thiệu"
+        }
+    ) then
+        return "identity"
+    end
+
+    if contains(
+        t,
+        {
+            "bạn làm được gì",
+            "chức năng",
+            "có thể làm gì",
+            "help",
+            "hướng dẫn"
+        }
+    ) then
+        return "capabilities"
+    end
+
+    if contains(
+        t,
+        {
+            "nhớ gì",
+            "memory",
+            "bạn nhớ",
+            "đã nhớ"
+        }
+    ) then
+        return "memory"
+    end
+
+    if contains(
+        t,
+        {
+            "quên đi",
+            "xóa nhớ",
+            "reset memory",
+            "xóa memory"
+        }
+    ) then
+        return "reset_memory"
+    end
+
+    if contains(
+        t,
+        {
+            "xin chào",
+            "hello",
+            "chào",
+            "hi "
+        }
+    ) then
+        return "greeting"
+    end
+
+    if contains(
+        t,
+        {
+            "cảm ơn",
+            "thanks",
+            "thank you"
+        }
+    ) then
+        return "thanks"
+    end
+
+    if contains(
+        t,
+        {
+            "viết code",
+            "code giúp",
+            "script",
+            "luau",
+            "lập trình"
+        }
+    ) then
+        return "code"
+    end
+
+    if contains(
+        t,
+        {
+            "build",
+            "xây",
+            "tạo hệ thống",
+            "thiết kế"
+        }
+    ) then
+        return "build"
+    end
+
+    if contains(
+        t,
+        {
+            "lỗi",
+            "bug",
+            "error",
+            "sửa",
+            "debug"
+        }
+    ) then
+        return "debug"
+    end
+
+    if contains(
+        t,
+        {
+            "phân tích",
+            "analyze",
+            "đánh giá"
+        }
+    ) then
+        return "analyze"
+    end
+
+    if contains(
+        t,
+        {
+            "kế hoạch",
+            "plan",
+            "lập kế hoạch"
+        }
+    ) then
+        return "plan"
+    end
+
+    if contains(
+        t,
+        {
+            "giải thích",
+            "tại sao",
+            "why",
+            "là gì"
+        }
+    ) then
+        return "explain"
+    end
+
+    if contains(
+        t,
+        {
+            "profile",
+            "trạng thái",
+            "status",
+            "brainid"
+        }
+    ) then
+        return "status"
+    end
+
+    if string.find(
+        t,
+        "nhớ rằng",
+        1,
+        true
+    ) then
+        return "learn"
+    end
+
+    return "general"
+end
+
+--============================================================
+-- PLANNER
+--============================================================
+
+local function createPlan(goal)
+
+    goal =
+        tostring(goal or "")
+
+    if goal == "" then
+        return nil
+    end
+
+    local intent =
+        detectIntent(goal)
+
+    local steps = {}
+
+    if intent == "follow" then
+
+        steps = {
+
+            "Xác định vị trí người chơi",
+
+            "Kiểm tra khoảng cách",
+
+            "Tính vị trí follow",
+
+            "Tìm đường",
+
+            "Di chuyển",
+
+            "Kiểm tra kết quả"
+        }
+
+    elseif intent == "scan" then
+
+        steps = {
+
+            "Quét player",
+
+            "Quét environment",
+
+            "So sánh thay đổi",
+
+            "Cập nhật World Model",
+
+            "Báo cáo"
+        }
+
+    elseif intent == "build"
+        or intent == "code" then
+
+        steps = {
+
+            "Phân tích yêu cầu",
+
+            "Xác định thành phần",
+
+            "Lập cấu trúc",
+
+            "Kiểm tra logic",
+
+            "Tạo kết quả",
+
+            "Kiểm tra lại"
+        }
+
+    else
+
+        steps = {
+
+            "Hiểu mục tiêu",
+
+            "Lấy context",
+
+            "Kiểm tra memory",
+
+            "Chọn skill",
+
+            "Thực hiện",
+
+            "Đánh giá kết quả"
+        }
+    end
+
+    Agent.CurrentPlan = {
+
+        goal = goal,
+
+        intent = intent,
+
+        steps = steps,
+
+        current = 1,
+
+        status = "active",
+
+        created = os.time()
+    }
+
+    return Agent.CurrentPlan
+end
+
+local function planText()
+
+    local plan =
+        Agent.CurrentPlan
+
+    if not plan then
+        return "Hiện không có plan."
+    end
+
+    local result = {
+
+        "GOAL: " ..
+            plan.goal,
+
+        "INTENT: " ..
+            plan.intent,
+
+        "STATUS: " ..
+            plan.status,
+
+        "STEP: " ..
+            tostring(plan.current)
+            .. "/" ..
+            tostring(#plan.steps)
+    }
+
+    for i, step in ipairs(
+        plan.steps
+    ) do
+
+        table.insert(
+            result,
+            tostring(i) ..
+            ". " ..
+            step
+        )
+    end
+
+    return table.concat(
+        result,
+        "\n"
+    )
+end
+
+--============================================================
+-- COMMAND SYSTEM
+--============================================================
+
+local function setLanguage(
+    language
+)
+
+    if not language
+        or language == "" then
+
+        return "Ngôn ngữ không hợp lệ."
+    end
+
+    CONFIG.Agent.Language =
+        language
+
+    remember(
+        "preference",
+        "Language = " ..
+            language,
+        0.9
+    )
+
+    return
+        "Đã đổi ngôn ngữ AI sang: "
+        .. language
+end
+
+local function setPersonality(
+    text
+)
+
+    CONFIG.Agent.Personality =
+        tostring(text)
+
+    remember(
+        "preference",
+        "Personality = " ..
+            text,
+        0.9
+    )
+
+    return
+        "Đã thay đổi tính cách."
+end
+
+local function setStyle(
+    text
+)
+
+    CONFIG.Agent.Style =
+        tostring(text)
+
+    remember(
+        "preference",
+        "Style = " ..
+            text,
+        0.9
+    )
+
+    return
+        "Đã thay đổi phong cách."
+end
+
+local function createCustomSkill(
+    name,
+    description,
+    instructions
+)
+
+    name =
+        string.lower(
+            tostring(name or "")
+        )
+
+    if name == "" then
+        return false
+    end
+
+    registerSkill(
+
+        name,
+
+        description
+            or "Custom skill",
+
+        {},
+
+        instructions
+            or description
+            or "",
+
+        function(context)
+
+            return {
+
+                success = true,
+
+                message =
+                    "Custom skill " ..
+                    name ..
+                    " executed."
+
+            }
+
+        end
+    )
+
+    remember(
+        "skill",
+        "Created skill: " ..
+            name,
+        0.8
+    )
+
+    return true
+end
+
 local function command(message)
-    if string.sub(message, 1, 1) \~= "/" then return nil end
+
+    if string.sub(
+        message,
+        1,
+        1
+    ) ~= "/" then
+
+        return nil
+    end
 
     local args = {}
-    for word in string.gmatch(message, "%S+") do
-        table.insert(args, word)
+
+    for word in string.gmatch(
+        message,
+        "%S+"
+    ) do
+
+        table.insert(
+            args,
+            word
+        )
     end
-    local cmd = string.lower(args[1] or "")
+
+    local cmd =
+        string.lower(
+            args[1] or ""
+        )
 
     if cmd == "/language" then
-        return setLanguage(table.concat(args, " ", 2))
+
+        return setLanguage(
+            table.concat(
+                args,
+                " ",
+                2
+            )
+        )
     end
+
     if cmd == "/personality" then
-        return setPersonality(table.concat(args, " ", 2))
+
+        return setPersonality(
+            table.concat(
+                args,
+                " ",
+                2
+            )
+        )
     end
+
     if cmd == "/style" then
-        return setStyle(table.concat(args, " ", 2))
+
+        return setStyle(
+            table.concat(
+                args,
+                " ",
+                2
+            )
+        )
     end
-    if cmd == "/instruction" or cmd == "/instructions" then
-        addInstruction(table.concat(args, " ", 2))
-        return "Đã thêm personal instruction."
+
+    if cmd == "/instruction"
+        or cmd == "/instructions" then
+
+        local text =
+            table.concat(
+                args,
+                " ",
+                2
+            )
+
+        addInstruction(text)
+
+        return
+            "Đã thêm instruction."
     end
-    if cmd == "/profile" then
+
+    if cmd == "/profile"
+        or cmd == "/brain" then
+
         return profileText()
     end
+
     if cmd == "/memory" then
-        return memoryText(60)
+
+        return
+            memoryText(60)
     end
-    if cmd == "/skills" or cmd == "/skill" then
-        if args[2] == "list" or not args[2] then
-            local list = {}
-            for name, skill in pairs(Agent.Skills) do
-                table.insert(list, name .. " — " .. skill.Description)
-            end
-            table.sort(list)
-            return table.concat(list, "\n")
-        end
-        if args[2] == "use" then
-            local skill = Agent.Skills[string.lower(args[3] or "")]
-            if not skill then return "Không tìm thấy skill." end
-            remember("skill", "Activated: " .. skill.Name)
-            return "Đã kích hoạt skill: " .. skill.Name .. "\n" .. skill.Instructions
-        end
-        if args[2] == "create" then
-            local name = args[3]
-            local description = table.concat(args, " ", 4)
-            if not name then return "Dùng: /skill create ten mo-ta" end
-            createCustomSkill(name, description, description)
-            return "Đã tạo skill: " .. name
-        end
+
+    if cmd == "/world" then
+
+        scanWorld()
+
+        return
+            observationText()
     end
+
+    if cmd == "/events" then
+
+        return
+            recentEventsText()
+    end
+
+    if cmd == "/plan" then
+
+        if args[2] then
+
+            local goal =
+                table.concat(
+                    args,
+                    " ",
+                    2
+                )
+
+            createPlan(goal)
+
+        end
+
+        return
+            planText()
+    end
+
     if cmd == "/follow" then
-        Agent.Following = true
-        return "Đã bật follow."
+
+        executeAction(
+            "FOLLOW"
+        )
+
+        return
+            "Đã bật follow."
     end
+
     if cmd == "/stop" then
-        Agent.Following = false
-        stopMovement()
-        return "Đã dừng follow."
+
+        executeAction(
+            "STOP"
+        )
+
+        return
+            "Đã dừng follow."
     end
+
     if cmd == "/scan" then
-        scanWorld()
-        return observationText()
+
+        executeAction(
+            "SCAN"
+        )
+
+        return
+            observationText()
     end
+
     if cmd == "/reset" then
-        table.clear(Agent.Memory)
-        table.clear(Agent.Conversation)
-        return "Đã reset memory và conversation."
+
+        table.clear(
+            Agent.Memory
+        )
+
+        table.clear(
+            Agent.Conversation
+        )
+
+        table.clear(
+            Agent.Events
+        )
+
+        table.clear(
+            Agent.LearnedRules
+        )
+
+        BrainState.LastTopic =
+            nil
+
+        Agent.CurrentPlan =
+            nil
+
+        return
+            "Đã reset memory, events, rules và conversation."
     end
+
     if cmd == "/brainid" then
-        return "BrainId: " .. tostring(Agent.BrainId)
-    end
-    return "Command không tồn tại."
-end
 
---==================================================
--- LOCAL BRAIN
---==================================================
+        return
+            "BrainId: " ..
+            tostring(
+                Agent.BrainId
+            )
+    end
 
-local function localBrain(message)
-    local lower = string.lower(message)
+    if cmd == "/learn" then
 
-    if lower:find("theo anh", 1, true) or lower:find("follow", 1, true) then
-        Agent.Following = true
-        return "Được. Tôi sẽ theo anh và tự tìm đường."
+        local trigger =
+            args[2]
+
+        local rule =
+            table.concat(
+                args,
+                " ",
+                3
+            )
+
+        if not trigger
+            or rule == "" then
+
+            return
+                "Dùng: /learn trigger rule"
+        end
+
+        learnRule(
+            trigger,
+            rule,
+            0.9
+        )
+
+        return
+            "Đã học rule: " ..
+            trigger ..
+            " → " ..
+            rule
     end
-    if lower:find("dừng", 1, true) or lower:find("stop", 1, true) then
-        Agent.Following = false
-        stopMovement()
-        return "Đã dừng. Tôi vẫn có thể quan sát."
+
+    if cmd == "/rules" then
+
+        local result = {}
+
+        for _, rule in ipairs(
+            Agent.LearnedRules
+        ) do
+
+            table.insert(
+                result,
+
+                rule.trigger ..
+                " → " ..
+                rule.rule ..
+                " [" ..
+                string.format(
+                    "%.2f",
+                    rule.confidence
+                ) ..
+                "]"
+            )
+        end
+
+        if #result == 0 then
+            return "Chưa có learned rules."
+        end
+
+        return table.concat(
+            result,
+            "\n"
+        )
     end
-    if lower:find("quét", 1, true) or lower:find("scan", 1, true) or lower:find("quan sát", 1, true) then
-        scanWorld()
-        return "Đây là những gì tôi quan sát được:\n" .. observationText()
-    end
-    if lower:find("skill", 1, true) then
-        local skill = selectSkill(message)
-        if skill then
-            return "Skill phù hợp: " .. skill.Name .. "\n" .. skill.Instructions
+
+    if cmd == "/skills"
+        or cmd == "/skill" then
+
+        if not args[2]
+            or args[2] == "list" then
+
+            local list = {}
+
+            for name, skill in pairs(
+                Agent.Skills
+            ) do
+
+                table.insert(
+                    list,
+                    name ..
+                    " — " ..
+                    skill.Description
+                )
+            end
+
+            table.sort(list)
+
+            return table.concat(
+                list,
+                "\n"
+            )
+        end
+
+        if args[2] == "use" then
+
+            local skill =
+                Agent.Skills[
+                    string.lower(
+                        args[3] or ""
+                    )
+                ]
+
+            if not skill then
+
+                return
+                    "Không tìm thấy skill."
+            end
+
+            local result
+
+            if skill.Execute then
+
+                local ok, data =
+                    pcall(
+                        skill.Execute,
+                        {
+                            message = message,
+                            agent = Agent
+                        }
+                    )
+
+                if ok then
+                    result = data
+                end
+            end
+
+            return
+                "Skill: " ..
+                skill.Name ..
+                "\n\n" ..
+                skill.Instructions ..
+                (
+                    result
+                    and
+                    "\n\n" ..
+                    tostring(
+                        result.message
+                        or ""
+                    )
+                    or ""
+                )
+        end
+
+        if args[2] == "create" then
+
+            local name =
+                args[3]
+
+            local description =
+                table.concat(
+                    args,
+                    " ",
+                    4
+                )
+
+            if not name then
+
+                return
+                    "Dùng: /skill create ten mo-ta"
+            end
+
+            createCustomSkill(
+                name,
+                description,
+                description
+            )
+
+            return
+                "Đã tạo skill: " ..
+                name
         end
     end
-    if lower:find("bạn là ai", 1, true) then
-        return "Tôi là " .. CONFIG.Agent.Name .. ", một adaptive AI companion. Tôi có memory, skills, observation, navigation và personality."
-    end
-    if lower:find("nhận xét", 1, true) or lower:find("comment", 1, true) then
-        scanWorld()
-        return "Nhận xét hiện tại:\n" .. observationText()
-    end
-    if lower:find("nhớ", 1, true) then
-        return "Tôi đang giữ " .. tostring(#Agent.Memory) .. " memory entries."
-    end
 
-    local skill = selectSkill(message)
-    if skill then
-        remember("skill", "Used skill: " .. skill.Name)
-        return "Tôi sẽ xử lý yêu cầu bằng skill \"" .. skill.Name .. "\".\n\n" .. skill.Instructions
-    end
-
-    return "Tôi đã nhận yêu cầu: \"" .. clampText(message, 180) .. "\".\nTôi đang sử dụng dữ liệu quan sát, memory và các skill phù hợp để xử lý."
+    return
+        "Command không tồn tại."
 end
 
---==================================================
--- REMOTE BRAIN
---==================================================
+--============================================================
+-- LOCAL BRAIN
+--============================================================
 
-local function extractResponse(data)
-    if type(data) \~= "table" then return nil end
-    local candidates = { data.response, data.answer, data.reply, data.content, data.text }
-    for _, value in ipairs(candidates) do
-        if type(value) == "string" and #value > 0 then return value end
+local function localBrain(
+    message
+)
+
+    if not message
+        or message == "" then
+
+        return
+            "Anh nói gì đi."
     end
-    if type(data.message) == "string" then return data.message end
-    if type(data.message) == "table" and type(data.message.content) == "string" then
+
+    BrainState.Turn += 1
+
+    BrainState.LastUserMessage =
+        message
+
+    local intent =
+        detectIntent(message)
+
+    BrainState.LastIntent =
+        intent
+
+    local lower =
+        normalize(message)
+
+    -- FOLLOW
+
+    if intent == "follow" then
+
+        executeAction(
+            "FOLLOW"
+        )
+
+        BrainState.Confidence =
+            0.98
+
+        return pick({
+
+            "Được. Tôi sẽ theo anh.",
+
+            "Ok, follow đã bật. Tôi tự tìm đường.",
+
+            "Được. Anh đi trước, tôi theo sau."
+        })
+    end
+
+    -- STOP
+
+    if intent == "stop" then
+
+        executeAction(
+            "STOP"
+        )
+
+        BrainState.Confidence =
+            0.99
+
+        return pick({
+
+            "Đã dừng.",
+
+            "Ok, tôi đứng đây và quan sát.",
+
+            "Ngừng follow."
+        })
+    end
+
+    -- SCAN
+
+    if intent == "scan" then
+
+        executeAction(
+            "SCAN"
+        )
+
+        BrainState.Confidence =
+            0.95
+
+        local obs =
+            observationText()
+
+        if obs == "" then
+
+            return
+                "Hiện tại tôi chưa thấy dữ liệu môi trường."
+        end
+
+        return
+            "Quan sát hiện tại:\n" ..
+            obs
+    end
+
+    -- IDENTITY
+
+    if intent == "identity" then
+
+        return
+            "Tôi là " ..
+            CONFIG.Agent.Name ..
+            ". Tôi là Astra AI companion với Brain Core, memory, skills, planner, world model và khả năng tự hành động trong Roblox."
+    end
+
+    -- CAPABILITIES
+
+    if intent == "capabilities" then
+
+        return table.concat({
+
+            "Tôi có:",
+
+            "• Brain Core",
+
+            "• Memory + retrieval",
+
+            "• Learned rules",
+
+            "• Skill system",
+
+            "• Planner",
+
+            "• World Model",
+
+            "• Event detection",
+
+            "• Follow + pathfinding",
+
+            "• Local Brain",
+
+            "• Remote Brain fallback"
+
+        }, "\n")
+    end
+
+    -- MEMORY
+
+    if intent == "memory" then
+
+        if #Agent.Memory == 0 then
+
+            return
+                "Memory hiện đang trống."
+        end
+
+        return
+            "Tôi đang giữ " ..
+            tostring(
+                #Agent.Memory
+            ) ..
+            " memory entries:\n\n" ..
+            memoryText(12)
+    end
+
+    -- RESET
+
+    if intent ==
+        "reset_memory" then
+
+        table.clear(
+            Agent.Memory
+        )
+
+        table.clear(
+            Agent.Conversation
+        )
+
+        table.clear(
+            Agent.Events
+        )
+
+        BrainState.LastTopic =
+            nil
+
+        return
+            "Đã xóa memory và conversation."
+    end
+
+    -- GREETING
+
+    if intent ==
+        "greeting" then
+
+        return pick({
+
+            "Chào anh.",
+
+            "Hey, tôi online.",
+
+            "Chào anh. Astra đang sẵn sàng."
+        })
+    end
+
+    -- THANKS
+
+    if intent ==
+        "thanks" then
+
+        return pick({
+
+            "Không có gì.",
+
+            "Ok.",
+
+            "Cứ bảo nếu anh cần thêm."
+        })
+    end
+
+    -- STATUS
+
+    if intent ==
+        "status" then
+
+        return
+            profileText()
+    end
+
+    -- LEARNING
+
+    if string.find(
+        lower,
+        "nhớ rằng",
+        1,
+        true
+    ) then
+
+        local rule =
+            message:gsub(
+                "^[Nn]hớ rằng%s*",
+                ""
+            )
+
+        learnRule(
+            "nhớ rằng",
+            rule,
+            0.95
+        )
+
+        return
+            "Đã ghi nhận điều đó vào learned rules."
+    end
+
+    -- CREATE PLAN
+
+    if intent ==
+        "plan"
+        and CONFIG.Brain.EnablePlanning then
+
+        local plan =
+            createPlan(message)
+
+        return
+            "Tôi đã tạo kế hoạch:\n\n" ..
+            planText()
+    end
+
+    -- SKILL
+
+    local skill,
+        skillScore =
+        selectSkill(message)
+
+    if skill then
+
+        local retrieved =
+            retrievedMemoryText(
+                message
+            )
+
+        local rules =
+            ruleText(
+                message
+            )
+
+        local executionMessage =
+            ""
+
+        if skill.Execute then
+
+            local ok, result =
+                pcall(
+                    skill.Execute,
+                    {
+
+                        message =
+                            message,
+
+                        intent =
+                            intent,
+
+                        memory =
+                            retrieved,
+
+                        rules =
+                            rules,
+
+                        world =
+                            World,
+
+                        agent =
+                            Agent
+                    }
+                )
+
+            if ok
+                and type(result)
+                    == "table" then
+
+                executionMessage =
+                    tostring(
+                        result.message
+                        or ""
+                    )
+            end
+        end
+
+        remember(
+            "skill",
+            "Used skill: " ..
+            skill.Name,
+            0.65
+        )
+
+        BrainState.Confidence =
+            math.clamp(
+                0.55 +
+                skillScore * 0.1,
+                0,
+                1
+            )
+
+        if skill.Name ==
+            "observe" then
+
+            return
+                "Tôi đã quan sát:\n" ..
+                observationText()
+        end
+
+        if executionMessage ~= "" then
+
+            return
+                executionMessage
+        end
+
+        return
+            "Tôi sẽ xử lý bằng skill \"" ..
+            skill.Name ..
+            "\".\n\n" ..
+            skill.Instructions
+    end
+
+    -- WHY
+
+    if contains(
+        lower,
+        {
+            "tại sao",
+            "vì sao",
+            "why"
+        }
+    ) then
+
+        BrainState.Confidence =
+            0.45
+
+        return
+            "Tôi cần thêm ngữ cảnh để trả lời chính xác. Tôi không muốn tự bịa nguyên nhân khi chưa có đủ dữ liệu."
+    end
+
+    -- HOW
+
+    if contains(
+        lower,
+        {
+            "làm sao",
+            "cách nào",
+            "how to"
+        }
+    ) then
+
+        return
+            "Tôi có thể lập kế hoạch cho việc này. Anh muốn tôi tập trung vào cách làm nhanh hay cách làm ổn định?"
+    end
+
+    -- MEMORY CONTEXT
+
+    local memories =
+        retrieveMemories(
+            message
+        )
+
+    if #memories > 0 then
+
+        BrainState.Confidence =
+            0.65
+
+        local latest =
+            memories[1]
+
+        if latest then
+
+            return
+                "Tôi nhớ một phần liên quan: " ..
+                clampText(
+                    latest.text,
+                    180
+                ) ..
+                "\n\nAnh muốn tôi tiếp tục từ đó hay xử lý theo hướng mới?"
+        end
+    end
+
+    -- GENERAL
+
+    BrainState.Confidence =
+        0.35
+
+    return pick({
+
+        "Tôi hiểu hướng anh nói, nhưng cần thêm một chút context để xử lý chính xác.",
+
+        "Ok. Tôi đang giữ ngữ cảnh hiện tại. Anh muốn tôi thực hiện bước nào?",
+
+        "Tôi chưa muốn đoán bừa. Anh cho tôi thêm chi tiết nhé.",
+
+        "Được. Tôi có thể phân tích, lập plan hoặc thực hiện action tùy yêu cầu."
+    })
+end
+
+--============================================================
+-- REMOTE RESPONSE PARSER
+--============================================================
+
+local function extractResponse(
+    data
+)
+
+    if type(data) ~= "table" then
+        return nil
+    end
+
+    local candidates = {
+
+        data.response,
+
+        data.answer,
+
+        data.reply,
+
+        data.content,
+
+        data.text
+    }
+
+    for _, value in ipairs(
+        candidates
+    ) do
+
+        if type(value)
+            == "string"
+            and #value > 0 then
+
+            return value
+        end
+    end
+
+    if type(data.message)
+        == "string" then
+
+        return data.message
+    end
+
+    if type(data.message)
+        == "table"
+        and type(
+            data.message.content
+        ) == "string" then
+
         return data.message.content
     end
-    if type(data.choices) == "table" and data.choices[1] then
-        local choice = data.choices[1]
-        if type(choice.message) == "table" and type(choice.message.content) == "string" then
-            return choice.message.content
+
+    if type(data.choices)
+        == "table"
+        and data.choices[1] then
+
+        local choice =
+            data.choices[1]
+
+        if type(
+            choice.message
+        ) == "table"
+        and type(
+            choice.message.content
+        ) == "string" then
+
+            return
+                choice.message.content
         end
-        if type(choice.text) == "string" then return choice.text end
+
+        if type(choice.text)
+            == "string" then
+
+            return choice.text
+        end
     end
+
     return nil
 end
 
-local function buildPrompt(message)
-    local skill = selectSkill(message)
-    local skillText = ""
+--============================================================
+-- BUILD REMOTE PROMPT
+--============================================================
+
+local function buildPrompt(
+    message
+)
+
+    local skill =
+        selectSkill(message)
+
+    local skillText =
+        ""
+
     if skill then
-        skillText = "\nACTIVE SKILL:\n" .. skill.Name .. "\n" .. skill.Instructions
+
+        skillText =
+            "\nACTIVE SKILL:\n" ..
+            skill.Name ..
+            "\n" ..
+            skill.Instructions
     end
-    local instructions = table.concat(Agent.Instructions, "\n")
 
-    local prompt = [[
-You are an adaptive AI companion inside Roblox.
+    local instructions =
+        table.concat(
+            Agent.Instructions,
+            "\n"
+        )
 
-IDENTITY:
-Name: ]] .. CONFIG.Agent.Name .. [[
+    local retrieved =
+        retrievedMemoryText(
+            message
+        )
 
-LANGUAGE:
-]] .. CONFIG.Agent.Language .. [[
+    local rules =
+        ruleText(
+            message
+        )
 
-PERSONALITY:
-]] .. CONFIG.Agent.Personality .. [[
+    local events =
+        recentEventsText()
 
-STYLE:
-]] .. CONFIG.Agent.Style .. [[
+    local prompt = table.concat({
 
-INITIATIVE:
-]] .. tostring(CONFIG.Agent.Initiative) .. [[
+        "You are Astra, an adaptive AI companion inside Roblox.",
 
-CREATIVITY:
-]] .. tostring(CONFIG.Agent.Creativity) .. [[
+        "",
 
-PERSONAL INSTRUCTIONS:
-]] .. instructions .. [[
+        "IMPORTANT BEHAVIOR:",
 
-SKILL:
-]] .. skillText .. [[
+        "Do not claim actions happened unless they actually happened.",
 
-WORLD OBSERVATIONS:
-]] .. observationText() .. [[
+        "Do not invent world entities.",
 
-MEMORY:
-]] .. memoryText(50) .. [[
+        "Use memory only when relevant.",
 
-RULES:
-- Never invent world observations.
-- Distinguish facts from assumptions.
-- Adapt when new information arrives.
-- Use memory when useful.
-- If information is missing, say so.
-- Give practical answers.
-- Do not claim to have performed an action unless a Roblox tool actually performed it.
-- You may suggest actions, but the client must execute them.
+        "If uncertain, say so.",
 
-USER:
-]] .. message
+        "Prefer concise natural responses.",
 
-    if #prompt > CONFIG.Remote.MaxContext then
-        prompt = string.sub(prompt, #prompt - CONFIG.Remote.MaxContext)
+        "",
+
+        "IDENTITY:",
+
+        CONFIG.Agent.Name,
+
+        "",
+
+        "LANGUAGE:",
+
+        CONFIG.Agent.Language,
+
+        "",
+
+        "PERSONALITY:",
+
+        CONFIG.Agent.Personality,
+
+        "",
+
+        "STYLE:",
+
+        CONFIG.Agent.Style,
+
+        "",
+
+        "PERSONAL INSTRUCTIONS:",
+
+        instructions,
+
+        "",
+
+        "LEARNED RULES:",
+
+        rules,
+
+        "",
+
+        "ACTIVE SKILL:",
+
+        skillText,
+
+        "",
+
+        "WORLD OBSERVATIONS:",
+
+        observationText(),
+
+        "",
+
+        "RECENT EVENTS:",
+
+        events,
+
+        "",
+
+        "RELEVANT MEMORY:",
+
+        retrieved,
+
+        "",
+
+        "RECENT CONVERSATION:"
+    }, "\n")
+
+    for _, item in ipairs(
+        Agent.Conversation
+    ) do
+
+        prompt =
+            prompt ..
+            "\n" ..
+            tostring(
+                item.role
+            ) ..
+            ": " ..
+            tostring(
+                item.content
+            )
     end
+
+    prompt =
+        prompt ..
+        "\n\nUSER:\n" ..
+        message
+
+    if #prompt >
+        CONFIG.Remote.MaxContext then
+
+        prompt =
+            string.sub(
+                prompt,
+                #prompt -
+                CONFIG.Remote.MaxContext +
+                1
+            )
+    end
+
     return prompt
 end
 
-local function remoteBrain(message)
-    if not CONFIG.Remote.Enabled or not HTTP then return nil end
-    if tick() - Agent.LastRemote < 1 then return nil end
-    Agent.LastRemote = tick()
+--============================================================
+-- REMOTE BRAIN
+--============================================================
 
-    local prompt = buildPrompt(message)
+local function remoteBrain(
+    message
+)
+
+    if not CONFIG.Remote.Enabled
+        or not CONFIG.Brain.EnableRemote
+        or not HTTP then
+
+        return nil
+    end
+
+    if tick() -
+        Agent.LastRemote <
+        1 then
+
+        return nil
+    end
+
+    if Agent.RemoteFailures > 0
+        and tick() -
+        Agent.LastRemoteFailure <
+        CONFIG.Remote.RetryCooldown then
+
+        return nil
+    end
+
+    Agent.LastRemote =
+        tick()
+
+    local prompt =
+        buildPrompt(message)
+
     local body = {
-        message = prompt,
-        prompt = prompt,
-        user = LocalPlayer.Name,
-        system = "Adaptive Roblox AI Agent",
-        conversation = Agent.Conversation
+
+        message =
+            prompt,
+
+        prompt =
+            prompt,
+
+        user =
+            LocalPlayer.Name,
+
+        userId =
+            tostring(
+                LocalPlayer.UserId
+            ),
+
+        brainId =
+            Agent.BrainId,
+
+        system =
+            "Astra Adaptive AI Agent",
+
+        conversation =
+            Agent.Conversation,
+
+        world =
+            Agent.Observations
     }
 
     local encoded
-    local encodedOK = pcall(function()
-        encoded = HttpService:JSONEncode(body)
-    end)
-    if not encodedOK then return nil end
 
-    for _, endpoint in ipairs(CONFIG.Remote.Endpoints) do
-        local response
-        local ok = pcall(function()
-            response = HTTP({
-                Url = CONFIG.Remote.BaseURL .. endpoint,
-                Method = "POST",
-                Headers = { ["Content-Type"] = "application/json" },
-                Body = encoded
-            })
+    local encodedOK =
+        pcall(function()
+
+            encoded =
+                HttpService:
+                JSONEncode(body)
+
         end)
 
-        if ok and type(response) == "table" and tonumber(response.StatusCode)
-            and response.StatusCode >= 200 and response.StatusCode < 300 then
+    if not encodedOK then
+        return nil
+    end
+
+    for _, endpoint in ipairs(
+        CONFIG.Remote.Endpoints
+    ) do
+
+        local response
+
+        local ok =
+            pcall(function()
+
+                response =
+                    HTTP({
+
+                        Url =
+                            CONFIG.Remote.BaseURL
+                            ..
+                            endpoint,
+
+                        Method =
+                            "POST",
+
+                        Headers = {
+
+                            ["Content-Type"] =
+                                "application/json"
+                        },
+
+                        Body =
+                            encoded
+                    })
+
+            end)
+
+        if ok
+            and type(response)
+                == "table"
+            and tonumber(
+                response.StatusCode
+            )
+            and response.StatusCode >= 200
+            and response.StatusCode < 300 then
 
             local data
-            local decodeOK = pcall(function()
-                data = HttpService:JSONDecode(response.Body)
-            end)
+
+            local decodeOK =
+                pcall(function()
+
+                    data =
+                        HttpService:
+                        JSONDecode(
+                            response.Body
+                        )
+
+                end)
+
             if decodeOK then
-                local result = extractResponse(data)
-                if result then
-                    Agent.RemoteAvailable = true
+
+                local result =
+                    extractResponse(
+                        data
+                    )
+
+                if result
+                    and #result > 0 then
+
+                    Agent.RemoteAvailable =
+                        true
+
+                    Agent.RemoteFailures =
+                        0
+
                     return result
                 end
             end
         end
     end
 
-    Agent.RemoteAvailable = false
+    Agent.RemoteAvailable =
+        false
+
+    Agent.RemoteFailures += 1
+
+    Agent.LastRemoteFailure =
+        tick()
+
     return nil
 end
 
---==================================================
--- CHAT
---==================================================
+--============================================================
+-- CONVERSATION
+--============================================================
 
-local function respond(message)
-    if Agent.BrainBusy then return end
-    Agent.BrainBusy = true
+local function addConversation(
+    role,
+    content
+)
 
-    addMessage("Anh", message, Color3.fromRGB(220, 220, 220))
-    table.insert(Agent.Conversation, { role = "user", content = message })
-    while #Agent.Conversation > CONFIG.Agent.ConversationLimit do
-        table.remove(Agent.Conversation, 1)
+    table.insert(
+        Agent.Conversation,
+        {
+
+            role = role,
+
+            content =
+                tostring(content)
+        }
+    )
+
+    while #Agent.Conversation >
+        CONFIG.Agent.ConversationLimit do
+
+        table.remove(
+            Agent.Conversation,
+            1
+        )
+    end
+end
+
+--============================================================
+-- RESPONSE PIPELINE
+--============================================================
+
+local function respond(
+    message
+)
+
+    if Agent.BrainBusy then
+        return
     end
 
+    Agent.BrainBusy =
+        true
+
+    BrainState.Thinking =
+        true
+
+    addMessage(
+        "Anh",
+        message,
+        Color3.fromRGB(
+            220,
+            220,
+            220
+        )
+    )
+
+    addConversation(
+        "user",
+        message
+    )
+
     task.spawn(function()
-        local commandResult = command(message)
+
         local response
 
-        if commandResult then
-            response = commandResult
-        else
-            response = remoteBrain(message)
-            if not response then
-                response = localBrain(message)
-            end
+        -- COMMAND FIRST
+
+        response =
+            command(message)
+
+        -- REMOTE SECOND
+
+        if not response then
+
+            response =
+                remoteBrain(
+                    message
+                )
+        end
+
+        -- LOCAL FALLBACK
+
+        if not response then
+
+            response =
+                localBrain(
+                    message
+                )
         end
 
         if not response then
-            response = "Tôi chưa có đủ dữ liệu."
+
+            response =
+                "Tôi chưa có đủ dữ liệu để xử lý yêu cầu này."
         end
 
-        table.insert(Agent.Conversation, { role = "assistant", content = response })
-        while #Agent.Conversation > CONFIG.Agent.ConversationLimit do
-            table.remove(Agent.Conversation, 1)
-        end
+        addConversation(
+            "assistant",
+            response
+        )
 
-        remember("conversation", "User: " .. clampText(message, 120))
-        remember("conversation", "AI: " .. clampText(response, 180))
+        BrainState.LastResponse =
+            response
 
-        addMessage(CONFIG.Agent.Name, response, Color3.fromRGB(120, 180, 255))
-        thoughtBubble(response)
-        Agent.BrainBusy = false
+        remember(
+            "conversation",
+            "User: " ..
+            clampText(
+                message,
+                140
+            ),
+            0.35
+        )
+
+        remember(
+            "conversation",
+            "AI: " ..
+            clampText(
+                response,
+                180
+            ),
+            0.35
+        )
+
+        addMessage(
+            CONFIG.Agent.Name,
+            response,
+            Color3.fromRGB(
+                120,
+                180,
+                255
+            )
+        )
+
+        thoughtBubble(
+            response
+        )
+
+        BrainState.Thinking =
+            false
+
+        Agent.BrainBusy =
+            false
     end)
 end
 
---==================================================
+--============================================================
+-- GUI
+--============================================================
+
+local GUI =
+    Instance.new(
+        "ScreenGui"
+    )
+
+GUI.Name =
+    "AstraAgentV5"
+
+GUI.ResetOnSpawn =
+    false
+
+GUI.IgnoreGuiInset =
+    true
+
+GUI.ZIndexBehavior =
+    Enum.ZIndexBehavior.Sibling
+
+pcall(function()
+
+    GUI.Parent =
+        CoreGui
+
+end)
+
+if not GUI.Parent then
+
+    GUI.Parent =
+        LocalPlayer:
+        WaitForChild(
+            "PlayerGui"
+        )
+end
+
+--============================================================
+-- TOGGLE BUTTON
+--============================================================
+
+local ToggleBtn =
+    Instance.new(
+        "TextButton"
+    )
+
+ToggleBtn.Size =
+    UDim2.fromOffset(
+        44,
+        44
+    )
+
+ToggleBtn.Position =
+    UDim2.new(
+        1,
+        -54,
+        1,
+        -64
+    )
+
+ToggleBtn.BackgroundColor3 =
+    Color3.fromRGB(
+        65,
+        105,
+        255
+    )
+
+ToggleBtn.Text =
+    "🤖"
+
+ToggleBtn.TextSize =
+    20
+
+ToggleBtn.Font =
+    Enum.Font.GothamBold
+
+ToggleBtn.TextColor3 =
+    Color3.new(
+        1,
+        1,
+        1
+    )
+
+ToggleBtn.Parent =
+    GUI
+
+local ToggleCorner =
+    Instance.new(
+        "UICorner"
+    )
+
+ToggleCorner.CornerRadius =
+    UDim.new(
+        1,
+        0
+    )
+
+ToggleCorner.Parent =
+    ToggleBtn
+
+--============================================================
+-- MAIN
+--============================================================
+
+local Main =
+    Instance.new(
+        "Frame"
+    )
+
+Main.Size =
+    UDim2.fromOffset(
+        330,
+        450
+    )
+
+Main.Position =
+    UDim2.new(
+        1,
+        -350,
+        1,
+        -510
+    )
+
+Main.BackgroundColor3 =
+    Color3.fromRGB(
+        17,
+        17,
+        23
+    )
+
+Main.BorderSizePixel =
+    0
+
+Main.Active =
+    true
+
+Main.Visible =
+    true
+
+Main.Parent =
+    GUI
+
+local MainCorner =
+    Instance.new(
+        "UICorner"
+    )
+
+MainCorner.CornerRadius =
+    UDim.new(
+        0,
+        12
+    )
+
+MainCorner.Parent =
+    Main
+
+--============================================================
+-- TITLE BAR
+--============================================================
+
+local TitleBar =
+    Instance.new(
+        "Frame"
+    )
+
+TitleBar.Size =
+    UDim2.new(
+        1,
+        0,
+        0,
+        38
+    )
+
+TitleBar.BackgroundColor3 =
+    Color3.fromRGB(
+        25,
+        25,
+        35
+    )
+
+TitleBar.BorderSizePixel =
+    0
+
+TitleBar.Parent =
+    Main
+
+local Title =
+    Instance.new(
+        "TextLabel"
+    )
+
+Title.Size =
+    UDim2.new(
+        1,
+        -110,
+        1,
+        0
+    )
+
+Title.Position =
+    UDim2.fromOffset(
+        12,
+        0
+    )
+
+Title.BackgroundTransparency =
+    1
+
+Title.Text =
+    "🤖 Astra V5"
+
+Title.TextColor3 =
+    Color3.new(
+        1,
+        1,
+        1
+    )
+
+Title.TextSize =
+    15
+
+Title.Font =
+    Enum.Font.GothamBold
+
+Title.TextXAlignment =
+    Enum.TextXAlignment.Left
+
+Title.Parent =
+    TitleBar
+
+local MinBtn =
+    Instance.new(
+        "TextButton"
+    )
+
+MinBtn.Size =
+    UDim2.fromOffset(
+        30,
+        30
+    )
+
+MinBtn.Position =
+    UDim2.new(
+        1,
+        -68,
+        0,
+        4
+    )
+
+MinBtn.BackgroundTransparency =
+    1
+
+MinBtn.Text =
+    "─"
+
+MinBtn.TextSize =
+    18
+
+MinBtn.TextColor3 =
+    Color3.fromRGB(
+        200,
+        200,
+        200
+    )
+
+MinBtn.Parent =
+    TitleBar
+
+local Close =
+    Instance.new(
+        "TextButton"
+    )
+
+Close.Size =
+    UDim2.fromOffset(
+        30,
+        30
+    )
+
+Close.Position =
+    UDim2.new(
+        1,
+        -34,
+        0,
+        4
+    )
+
+Close.BackgroundTransparency =
+    1
+
+Close.Text =
+    "×"
+
+Close.TextSize =
+    22
+
+Close.TextColor3 =
+    Color3.fromRGB(
+        255,
+        90,
+        90
+    )
+
+Close.Parent =
+    TitleBar
+
+--============================================================
+-- STATUS
+--============================================================
+
+local Status =
+    Instance.new(
+        "TextLabel"
+    )
+
+Status.Size =
+    UDim2.new(
+        1,
+        -20,
+        0,
+        18
+    )
+
+Status.Position =
+    UDim2.fromOffset(
+        12,
+        40
+    )
+
+Status.BackgroundTransparency =
+    1
+
+Status.Text =
+    "● Brain Online"
+
+Status.TextColor3 =
+    Color3.fromRGB(
+        100,
+        255,
+        150
+    )
+
+Status.TextSize =
+    11
+
+Status.Font =
+    Enum.Font.Gotham
+
+Status.TextXAlignment =
+    Enum.TextXAlignment.Left
+
+Status.Parent =
+    Main
+
+--============================================================
+-- CHAT
+--============================================================
+
+local Chat =
+    Instance.new(
+        "ScrollingFrame"
+    )
+
+Chat.Size =
+    UDim2.new(
+        1,
+        -20,
+        1,
+        -122
+    )
+
+Chat.Position =
+    UDim2.fromOffset(
+        10,
+        62
+    )
+
+Chat.BackgroundColor3 =
+    Color3.fromRGB(
+        10,
+        10,
+        14
+    )
+
+Chat.BorderSizePixel =
+    0
+
+Chat.ScrollBarThickness =
+    3
+
+Chat.AutomaticCanvasSize =
+    Enum.AutomaticSize.Y
+
+Chat.CanvasSize =
+    UDim2.new()
+
+Chat.Parent =
+    Main
+
+local ChatCorner =
+    Instance.new(
+        "UICorner"
+    )
+
+ChatCorner.CornerRadius =
+    UDim.new(
+        0,
+        8
+    )
+
+ChatCorner.Parent =
+    Chat
+
+local Layout =
+    Instance.new(
+        "UIListLayout"
+    )
+
+Layout.Padding =
+    UDim.new(
+        0,
+        5
+    )
+
+Layout.Parent =
+    Chat
+
+local ChatPadding =
+    Instance.new(
+        "UIPadding"
+    )
+
+ChatPadding.PaddingTop =
+    UDim.new(
+        0,
+        6
+    )
+
+ChatPadding.PaddingBottom =
+    UDim.new(
+        0,
+        6
+    )
+
+ChatPadding.PaddingLeft =
+    UDim.new(
+        0,
+        6
+    )
+
+ChatPadding.PaddingRight =
+    UDim.new(
+        0,
+        6
+    )
+
+ChatPadding.Parent =
+    Chat
+
+--============================================================
 -- INPUT
---==================================================
+--============================================================
+
+local Input =
+    Instance.new(
+        "TextBox"
+    )
+
+Input.Size =
+    UDim2.new(
+        1,
+        -70,
+        0,
+        36
+    )
+
+Input.Position =
+    UDim2.new(
+        0,
+        10,
+        1,
+        -48
+    )
+
+Input.BackgroundColor3 =
+    Color3.fromRGB(
+        29,
+        29,
+        38
+    )
+
+Input.BorderSizePixel =
+    0
+
+Input.PlaceholderText =
+    "Chat hoặc /command..."
+
+Input.PlaceholderColor3 =
+    Color3.fromRGB(
+        130,
+        130,
+        140
+    )
+
+Input.TextColor3 =
+    Color3.new(
+        1,
+        1,
+        1
+    )
+
+Input.TextSize =
+    13
+
+Input.Font =
+    Enum.Font.Gotham
+
+Input.ClearTextOnFocus =
+    false
+
+Input.TextWrapped =
+    true
+
+Input.Parent =
+    Main
+
+local InputCorner =
+    Instance.new(
+        "UICorner"
+    )
+
+InputCorner.CornerRadius =
+    UDim.new(
+        0,
+        8
+    )
+
+InputCorner.Parent =
+    Input
+
+local Send =
+    Instance.new(
+        "TextButton"
+    )
+
+Send.Size =
+    UDim2.fromOffset(
+        50,
+        36
+    )
+
+Send.Position =
+    UDim2.new(
+        1,
+        -60,
+        1,
+        -48
+    )
+
+Send.BackgroundColor3 =
+    Color3.fromRGB(
+        65,
+        105,
+        255
+    )
+
+Send.BorderSizePixel =
+    0
+
+Send.Text =
+    "➤"
+
+Send.TextColor3 =
+    Color3.new(
+        1,
+        1,
+        1
+    )
+
+Send.TextSize =
+    18
+
+Send.Font =
+    Enum.Font.GothamBold
+
+Send.Parent =
+    Main
+
+local SendCorner =
+    Instance.new(
+        "UICorner"
+    )
+
+SendCorner.CornerRadius =
+    UDim.new(
+        0,
+        8
+    )
+
+SendCorner.Parent =
+    Send
+
+--============================================================
+-- ADD MESSAGE
+--============================================================
+
+function addMessage(
+    author,
+    text,
+    color
+)
+
+    local label =
+        Instance.new(
+            "TextLabel"
+        )
+
+    label.Size =
+        UDim2.new(
+            1,
+            -8,
+            0,
+            0
+        )
+
+    label.AutomaticSize =
+        Enum.AutomaticSize.Y
+
+    label.BackgroundTransparency =
+        1
+
+    label.Text =
+        author ..
+        ": " ..
+        tostring(text)
+
+    label.TextColor3 =
+        color
+        or
+        Color3.new(
+            1,
+            1,
+            1
+        )
+
+    label.TextSize =
+        12
+
+    label.Font =
+        Enum.Font.Gotham
+
+    label.TextWrapped =
+        true
+
+    label.TextXAlignment =
+        Enum.TextXAlignment.Left
+
+    label.Parent =
+        Chat
+
+    task.defer(function()
+
+        pcall(function()
+
+            Chat.CanvasPosition =
+                Vector2.new(
+                    0,
+                    Chat.AbsoluteCanvasSize.Y
+                )
+
+        end)
+
+    end)
+end
+
+--============================================================
+-- GUI TOGGLE
+--============================================================
+
+local function toggleMain()
+
+    Main.Visible =
+        not Main.Visible
+end
+
+ToggleBtn.MouseButton1Click:
+    Connect(toggleMain)
+
+MinBtn.MouseButton1Click:
+    Connect(toggleMain)
+
+--============================================================
+-- DRAG
+--============================================================
+
+do
+
+    local dragging = false
+
+    local dragStart
+
+    local startPos
+
+    TitleBar.InputBegan:
+        Connect(function(input)
+
+            if input.UserInputType ==
+                Enum.UserInputType.MouseButton1
+                or
+                input.UserInputType ==
+                Enum.UserInputType.Touch then
+
+                dragging = true
+
+                dragStart =
+                    input.Position
+
+                startPos =
+                    Main.Position
+
+                input.Changed:
+                    Connect(function()
+
+                        if input.UserInputState ==
+                            Enum.UserInputState.End then
+
+                            dragging =
+                                false
+                        end
+                    end)
+            end
+        end)
+
+    UserInputService.InputChanged:
+        Connect(function(input)
+
+            if not dragging then
+                return
+            end
+
+            if input.UserInputType ==
+                Enum.UserInputType.MouseMovement
+                or
+                input.UserInputType ==
+                Enum.UserInputType.Touch then
+
+                local delta =
+                    input.Position
+                    -
+                    dragStart
+
+                Main.Position =
+                    UDim2.new(
+
+                        startPos.X.Scale,
+
+                        startPos.X.Offset
+                        + delta.X,
+
+                        startPos.Y.Scale,
+
+                        startPos.Y.Offset
+                        + delta.Y
+                    )
+            end
+        end)
+end
+
+--============================================================
+-- KEYBOARD
+--============================================================
+
+UserInputService.InputBegan:
+    Connect(function(
+        input,
+        processed
+    )
+
+        if processed then
+            return
+        end
+
+        if input.KeyCode ==
+            Enum.KeyCode.RightShift then
+
+            toggleMain()
+        end
+    end)
+
+--============================================================
+-- SEND
+--============================================================
 
 local function send()
-    local text = tostring(Input.Text or ""):gsub("^%s+", ""):gsub("%s+$", "")
-    if text == "" then return end
+
+    local text =
+        tostring(
+            Input.Text or ""
+        )
+
+    text =
+        text:gsub(
+            "^%s+",
+            ""
+        )
+
+    text =
+        text:gsub(
+            "%s+$",
+            ""
+        )
+
+    if text == "" then
+        return
+    end
+
     Input.Text = ""
+
     respond(text)
 end
 
-Send.MouseButton1Click:Connect(send)
-Input.FocusLost:Connect(function(enter)
-    if enter then send() end
-end)
+Send.MouseButton1Click:
+    Connect(send)
 
---==================================================
--- AUTONOMOUS THOUGHT
---==================================================
+Input.FocusLost:
+    Connect(function(enter)
+
+        if enter then
+            send()
+        end
+
+    end)
+
+--============================================================
+-- THOUGHT ENGINE
+--============================================================
 
 local thoughts = {
-    function() return "Tôi đang quan sát môi trường để hiểu thêm về khu vực này." end,
-    function() return "Tôi chưa nên kết luận quá sớm. Tôi sẽ thu thập thêm dữ liệu." end,
+
     function()
-        if Agent.Root and Agent.CloneRoot then
-            local d = dist(Agent.CloneRoot, Agent.Root)
-            if d > 20 then return "Tôi đang hơi xa anh. Tôi sẽ tự tìm đường quay lại." end
-        end
-        return "Khoảng cách hiện tại ổn."
+
+        return
+            "Tôi đang quan sát môi trường."
     end,
+
     function()
-        if #Agent.Memory > 20 then
-            return "Tôi đã tích lũy khá nhiều thông tin trong session này."
+
+        return
+            "Tôi chưa nên kết luận quá sớm."
+    end,
+
+    function()
+
+        if Agent.Root
+            and Agent.CloneRoot then
+
+            local d =
+                dist(
+                    Agent.CloneRoot,
+                    Agent.Root
+                )
+
+            if d > 20 then
+
+                return
+                    "Tôi đang hơi xa. Tôi sẽ quay lại."
+            end
         end
-        return "Tôi vẫn đang xây dựng model về môi trường hiện tại."
+
+        return
+            "Khoảng cách hiện tại ổn."
+    end,
+
+    function()
+
+        if #Agent.Events > 0 then
+
+            return
+                "Tôi vừa phát hiện một thay đổi trong môi trường."
+        end
+
+        return
+            "Mọi thứ có vẻ ổn."
     end
 }
 
-local function think()
-    if Agent.BrainBusy then return end
-    if tick() - Agent.LastThought < CONFIG.Agent.ThoughtInterval then return end
-    Agent.LastThought = tick()
-    if math.random() > CONFIG.Agent.Initiative then return end
-
-    local fn = thoughts[math.random(1, #thoughts)]
-    local result = fn()
-    remember("thought", result)
-    thoughtBubble(result)
-end
-
---==================================================
--- LOOPS
---==================================================
+--============================================================
+-- SCAN LOOP
+--============================================================
 
 task.spawn(function()
+
     while Agent.Alive do
-        if tick() - Agent.LastScan >= CONFIG.Agent.ScanInterval then
-            Agent.LastScan = tick()
-            scanWorld()
+
+        if tick() -
+            Agent.LastScan >=
+            CONFIG.Agent.ScanInterval then
+
+            Agent.LastScan =
+                tick()
+
+            pcall(
+                scanWorld
+            )
         end
+
         task.wait(0.3)
     end
 end)
 
+--============================================================
+-- FOLLOW LOOP
+--============================================================
+
 task.spawn(function()
+
     while Agent.Alive do
-        if Agent.Following then follow() end
+
+        if Agent.Following then
+
+            pcall(
+                follow
+            )
+        end
+
         task.wait(0.35)
     end
 end)
 
+--============================================================
+-- THOUGHT LOOP
+--============================================================
+
 task.spawn(function()
+
     while Agent.Alive do
-        think()
+
+        if not Agent.BrainBusy
+            and tick()
+            - Agent.LastThought
+            >= CONFIG.Agent.ThoughtInterval then
+
+            Agent.LastThought =
+                tick()
+
+            if math.random()
+                <= CONFIG.Agent.Initiative then
+
+                local result =
+                    thoughts[
+                        math.random(
+                            1,
+                            #thoughts
+                        )
+                    ]()
+
+                remember(
+                    "thought",
+                    result,
+                    0.25
+                )
+
+                thoughtBubble(
+                    result
+                )
+            end
+        end
+
         task.wait(0.5)
     end
 end)
 
--- Brain Registry loop
-task.spawn(function()
-    if not CONFIG.Remote.BrainRegistry or not CONFIG.Remote.BrainRegistry.Enabled then return end
-    task.wait(2)
-    registerBrain()
-    while Agent.Alive do
-        heartbeatBrain()
-        task.wait(CONFIG.Remote.BrainRegistry.HeartbeatInterval or 25)
-    end
-end)
-
---==================================================
--- RESPAWN
---==================================================
-
-LocalPlayer.CharacterAdded:Connect(function(character)
-    Agent.Character = character
-    task.wait(1)
-    Agent.Humanoid = getHumanoid(character)
-    Agent.Root = getRoot(character)
-    destroy(Agent.Clone)
-    Agent.Clone = nil
-    createClone()
-    thoughtBubble("Tôi đã trở lại.")
-end)
-
---==================================================
--- MOBILE RESIZE
---==================================================
+--============================================================
+-- STATUS LOOP
+--============================================================
 
 task.spawn(function()
+
     while Agent.Alive do
-        local camera = Workspace.CurrentCamera
-        if camera then
-            local viewport = camera.ViewportSize
-            if viewport.X < 600 then
-                Main.Size = UDim2.new(0.92, 0, 0, 470)
-                Main.Position = UDim2.new(0.04, 0, 0.5, -235)
-            end
+
+        local remoteText
+
+        if Agent.RemoteAvailable then
+
+            remoteText =
+                "Remote"
+
+        elseif HTTP then
+
+            remoteText =
+                "Local fallback"
+
+        else
+
+            remoteText =
+                "Local only"
         end
-        task.wait(1)
+
+        if BrainState.Thinking then
+
+            Status.Text =
+                "● Thinking • " ..
+                remoteText
+
+        elseif Agent.Moving then
+
+            Status.Text =
+                "● Moving • " ..
+                remoteText
+
+        elseif Agent.Following then
+
+            Status.Text =
+                "● Following • " ..
+                remoteText
+
+        else
+
+            Status.Text =
+                "● Online • " ..
+                remoteText
+        end
+
+        task.wait(0.5)
     end
 end)
 
---==================================================
--- TOGGLE
---==================================================
+--============================================================
+-- BRAIN REGISTRY
+--============================================================
 
-UserInputService.InputBegan:Connect(function(input, processed)
-    if processed then return end
-    if input.KeyCode == Enum.KeyCode.RightShift then
-        Main.Visible = not Main.Visible
+local function sendBrainRequest(
+    path,
+    payload
+)
+
+    if not CONFIG.Remote.BrainRegistry
+        or not CONFIG.Remote.BrainRegistry.Enabled
+        or not HTTP then
+
+        return false
     end
-end)
 
---==================================================
--- SHUTDOWN
---==================================================
+    local ok, encoded =
+        pcall(function()
 
-Agent.Shutdown = function()
-    Agent.Alive = false
-    Agent.PathId += 1
-    stopMovement()
-    destroy(Agent.Clone)
-    destroy(GUI)
-    getgenv().ASTRA_AGENT_V4 = nil
+            return HttpService:
+                JSONEncode(
+                    payload
+                )
+
+        end)
+
+    if not ok then
+        return false
+    end
+
+    local success =
+        false
+
+    pcall(function()
+
+        local response =
+            HTTP({
+
+                Url =
+                    CONFIG.Remote.BaseURL
+                    ..
+                    path,
+
+                Method =
+                    "POST",
+
+                Headers = {
+
+                    ["Content-Type"] =
+                        "application/json",
+
+                    ["X-Brain-Secret"] =
+                        CONFIG.Remote.BrainRegistry.Secret
+                },
+
+                Body =
+                    encoded
+            })
+
+        if response
+            and tonumber(
+                response.StatusCode
+            )
+            and response.StatusCode >= 200
+            and response.StatusCode < 300 then
+
+            success = true
+        end
+    end)
+
+    return success
 end
 
-Close.MouseButton1Click:Connect(Agent.Shutdown)
+local function getActiveSkillsList()
 
---==================================================
--- STARTUP
---==================================================
+    local list = {}
 
-addMessage("Astra", "Agent online. Skills, memory, personality, instructions, scanner, navigation và Brain Registry đã sẵn sàng.", Color3.fromRGB(120, 180, 255))
+    for name in pairs(
+        Agent.Skills
+    ) do
 
-task.delay(1, function()
-    if Agent.Alive then
-        thoughtBubble("Tôi online. Đang học môi trường...")
-        remember("system", "Astra Agent initialized. BrainId = " .. Agent.BrainId)
+        table.insert(
+            list,
+            name
+        )
+    end
+
+    table.sort(list)
+
+    return list
+end
+
+local function registerBrain()
+
+    local payload = {
+
+        brainId =
+            Agent.BrainId,
+
+        userId =
+            tostring(
+                LocalPlayer.UserId
+            ),
+
+        displayName =
+            LocalPlayer.DisplayName,
+
+        originalName =
+            LocalPlayer.Name,
+
+        createdAt =
+            os.time() * 1000,
+
+        brainVersion =
+            "5.0",
+
+        skills =
+            getActiveSkillsList(),
+
+        memoryCount =
+            #Agent.Memory,
+
+        learnedRuleCount =
+            #Agent.LearnedRules
+    }
+
+    local ok =
+        sendBrainRequest(
+            CONFIG.Remote.BrainRegistry.RegisterPath,
+            payload
+        )
+
+    if ok then
+
+        remember(
+            "system",
+            "Brain registered: " ..
+            Agent.BrainId,
+            0.5
+        )
+    end
+
+    return ok
+end
+
+local function heartbeatBrain()
+
+    local payload = {
+
+        brainId =
+            Agent.BrainId,
+
+        status =
+            Agent.Alive
+            and "online"
+            or "offline",
+
+        brainVersion =
+            "5.0",
+
+        activeSkills =
+            getActiveSkillsList(),
+
+        lastSeen =
+            os.time() * 1000,
+
+        intent =
+            BrainState.LastIntent,
+
+        action =
+            Agent.CurrentAction,
+
+        following =
+            Agent.Following,
+
+        memoryCount =
+            #Agent.Memory,
+
+        confidence =
+            BrainState.Confidence
+    }
+
+    sendBrainRequest(
+        CONFIG.Remote.BrainRegistry.HeartbeatPath,
+        payload
+    )
+end
+
+task.spawn(function()
+
+    if not CONFIG.Remote.BrainRegistry
+        or not CONFIG.Remote.BrainRegistry.Enabled then
+
+        return
+    end
+
+    task.wait(2)
+
+    registerBrain()
+
+    while Agent.Alive do
+
+        heartbeatBrain()
+
+        task.wait(
+            CONFIG.Remote.BrainRegistry.HeartbeatInterval
+            or 25
+        )
     end
 end)
+
+--============================================================
+-- CHARACTER RESPAWN
+--============================================================
+
+LocalPlayer.CharacterAdded:
+    Connect(function(character)
+
+        Agent.Character =
+            character
+
+        task.wait(1)
+
+        Agent.Humanoid =
+            getHumanoid(
+                character
+            )
+
+        Agent.Root =
+            getRoot(
+                character
+            )
+
+        destroy(
+            Agent.Clone
+        )
+
+        Agent.Clone =
+            nil
+
+        Agent.CloneRoot =
+            nil
+
+        Agent.CloneHumanoid =
+            nil
+
+        createClone()
+
+        addEvent(
+            "Astra đã tạo lại clone sau khi respawn.",
+            0.65
+        )
+
+        thoughtBubble(
+            "Tôi đã trở lại."
+        )
+    end)
+
+--============================================================
+-- SHUTDOWN
+--============================================================
+
+Agent.Shutdown = function()
+
+    if not Agent.Alive then
+        return
+    end
+
+    Agent.Alive =
+        false
+
+    Agent.PathId += 1
+
+    stopMovement()
+
+    destroy(
+        Agent.Clone
+    )
+
+    destroy(
+        GUI
+    )
+
+    getgenv().ASTRA_AGENT_V5 =
+        nil
+end
+
+Close.MouseButton1Click:
+    Connect(
+        Agent.Shutdown
+    )
+
+--============================================================
+-- INITIALIZE
+--============================================================
+
+createClone()
+
+addMessage(
+    "Astra",
+    "Astra V5 online. Brain Core + Memory + Skills + Planner + World Model đã sẵn sàng.",
+    Color3.fromRGB(
+        120,
+        180,
+        255
+    )
+)
+
+task.delay(
+    1,
+    function()
+
+        if Agent.Alive then
+
+            thoughtBubble(
+                "Tôi online. Đang xây dựng world model..."
+            )
+
+            remember(
+                "system",
+                "Astra Agent V5 initialized.",
+                0.8
+            )
+
+            remember(
+                "identity",
+                "BrainId = " ..
+                Agent.BrainId,
+                0.9
+            )
+        end
+    end
+)

@@ -1,0 +1,23 @@
+ASTRA BRAIN V5 — NO API KEY
+
+Required Render Environment Variable
+BRAIN_API_SECRET=make-a-long-random-secret
+
+Optional
+NO_KEY_AI_URL=https://text.pollinations.ai/openai
+NO_KEY_AI_MODEL=openai
+AI_TEMPERATURE=0.7
+NODE_ENV=production
+DATA_DIR=/opt/render/project/src/data
+
+Build Command
+npm install
+
+Start Command
+node server.js
+
+Notes
+- No AI provider API key is required by this build.
+- Keep BRAIN_API_SECRET private: it protects your Astra backend from random callers.
+- The default AI endpoint is a public no-key legacy-compatible Pollinations endpoint; public services can rate-limit, change, or become unavailable.
+- Add a persistent disk on Render if you want JSON memory to survive restarts/redeploys.

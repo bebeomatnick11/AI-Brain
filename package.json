@@ -1,7 +1,8 @@
 {
-  "name": "roblox-brain-registry",
-  "version": "1.0.0",
-  "description": "Roblox AI Brain Registry - Public dashboard for tracking AI Brains",
+  "name": "astra-brain-v5-no-api-key",
+  "version": "5.0.1",
+  "description": "Astra Brain V5 - Public AI Brain Registry without API keys",
+  "private": true,
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

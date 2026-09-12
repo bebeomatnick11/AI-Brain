@@ -53,7 +53,7 @@ local CONFIG = {
 
         Enabled = true,
 
-        BaseURL = "https://ai-brain-5w7u.onrender.com",
+        BaseURL = "Your_AI_Brain_Link",
 
         Endpoints = {
             "/api/chat",
@@ -74,7 +74,7 @@ local CONFIG = {
 
             -- WARNING:
             -- Secret trong LocalScript không phải secret tuyệt đối.
-            Secret = "Astra_Secret_2014_1990",
+            Secret = "Your_Astra_Secret",
 
             RegisterPath = "/api/brains/register",
 

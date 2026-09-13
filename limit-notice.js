@@ -1,0 +1,1 @@
+module.exports={id:'limit-notice',name:'limit-notice',description:'Explain real capability or output limits without pretending work was completed.',triggers:['limit','giới hạn','không thể'],priority:60,enabled:true,scope:'system',aiGuidance:'Be transparent about actual limits. Never claim an unavailable tool or file operation happened.'};

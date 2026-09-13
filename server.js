@@ -88,7 +88,25 @@ function createEmptyDB() {
     players: {},
     playerSessions: {},
     sessions: {},
-    loginAttempts: {}
+    loginAttempts: {},
+
+    // ========================================================
+    // ASTRA BRAIN V6 — COLLECTIVE INTELLIGENCE
+    // ========================================================
+
+    // Games discovered through Brain/player activity.
+    games: {},
+
+    // Learned knowledge.
+    //
+    // Visibility:
+    // - personal = private to its owner
+    // - shared   = generalized knowledge usable by other Brains
+    // - system   = Astra-wide system knowledge
+    knowledge: {},
+
+    // Learning event history.
+    learningEvents: []
   };
 }
 
@@ -104,12 +122,33 @@ function loadDB() {
       );
 
     return {
-      brains: data.brains || {},
-      players: data.players || {},
-      playerSessions: data.playerSessions || {},
-      sessions: data.sessions || {},
-      loginAttempts: data.loginAttempts || {}
-    };
+  brains: data.brains || {},
+  players: data.players || {},
+  playerSessions: data.playerSessions || {},
+  sessions: data.sessions || {},
+  loginAttempts: data.loginAttempts || {},
+
+  // ========================================================
+  // ASTRA BRAIN V6 — COLLECTIVE INTELLIGENCE
+  // ========================================================
+
+  games:
+    data.games &&
+    typeof data.games === 'object'
+      ? data.games
+      : {},
+
+  knowledge:
+    data.knowledge &&
+    typeof data.knowledge === 'object'
+      ? data.knowledge
+      : {},
+
+  learningEvents:
+    Array.isArray(data.learningEvents)
+      ? data.learningEvents
+      : []
+};
 
   } catch (e) {
 
@@ -615,6 +654,1200 @@ function readBody(req) {
       );
     }
   );
+}
+
+// ============================================================
+// ASTRA BRAIN V6 — COLLECTIVE INTELLIGENCE ENGINE
+// ============================================================
+
+function ensureLearningStores() {
+
+  if (
+    !db.games ||
+    typeof db.games !== 'object'
+  ) {
+    db.games = {};
+  }
+
+  if (
+    !db.knowledge ||
+    typeof db.knowledge !== 'object'
+  ) {
+    db.knowledge = {};
+  }
+
+  if (
+    !Array.isArray(
+      db.learningEvents
+    )
+  ) {
+    db.learningEvents = [];
+  }
+}
+
+
+// ============================================================
+// GAME NORMALIZATION
+// ============================================================
+
+function normalizeLearningGame(
+  input
+) {
+
+  if (
+    !input ||
+    typeof input !== 'object'
+  ) {
+    return null;
+  }
+
+  const game =
+    input.game &&
+    typeof input.game === 'object'
+      ? input.game
+      : input;
+
+  const name =
+    safeString(
+      game.name ||
+      game.gameName ||
+      'Unknown Game',
+      200
+    );
+
+  const placeId =
+    safeString(
+      game.placeId ||
+      game.placeID ||
+      '',
+      64
+    );
+
+  const universeId =
+    safeString(
+      game.universeId ||
+      game.universeID ||
+      '',
+      64
+    );
+
+  const jobId =
+    safeString(
+      game.jobId ||
+      game.jobID ||
+      '',
+      120
+    );
+
+  if (
+    !name &&
+    !placeId &&
+    !universeId
+  ) {
+    return null;
+  }
+
+  return {
+    name:
+      name ||
+      'Unknown Game',
+
+    placeId:
+      placeId ||
+      null,
+
+    universeId:
+      universeId ||
+      null,
+
+    jobId:
+      jobId ||
+      null
+  };
+}
+
+
+// ============================================================
+// GAME KEY
+// ============================================================
+
+function getLearningGameKey(
+  game
+) {
+
+  if (!game) {
+    return null;
+  }
+
+  if (
+    game.universeId
+  ) {
+    return (
+      'universe:' +
+      game.universeId
+    );
+  }
+
+  if (
+    game.placeId
+  ) {
+    return (
+      'place:' +
+      game.placeId
+    );
+  }
+
+  const normalizedName =
+    String(
+      game.name ||
+      'unknown'
+    )
+      .toLowerCase()
+      .replace(
+        /[^a-z0-9]+/g,
+        '-'
+      )
+      .replace(
+        /^-|-$/g,
+        ''
+      )
+      .slice(
+        0,
+        120
+      );
+
+  return (
+    'name:' +
+    (
+      normalizedName ||
+      'unknown'
+    )
+  );
+}
+
+
+// ============================================================
+// GAME RECORD
+// ============================================================
+
+function recordGameVisit(
+  gameInput,
+  brainId = null,
+  userId = null
+) {
+
+  ensureLearningStores();
+
+  const game =
+    normalizeLearningGame(
+      gameInput
+    );
+
+  if (!game) {
+    return null;
+  }
+
+  const gameKey =
+    getLearningGameKey(
+      game
+    );
+
+  if (!gameKey) {
+    return null;
+  }
+
+  const timestamp =
+    now();
+
+  let record =
+    db.games[
+      gameKey
+    ];
+
+  if (!record) {
+
+    record = {
+
+      gameKey,
+
+      name:
+        game.name,
+
+      placeId:
+        game.placeId,
+
+      universeId:
+        game.universeId,
+
+      firstSeen:
+        timestamp,
+
+      lastSeen:
+        timestamp,
+
+      totalVisits:
+        0,
+
+      brainIds:
+        [],
+
+      userIds:
+        [],
+
+      observations:
+        0,
+
+      verifiedKnowledgeCount:
+        0,
+
+      candidateKnowledgeCount:
+        0
+    };
+
+    db.games[
+      gameKey
+    ] = record;
+  }
+
+  if (game.name) {
+    record.name =
+      game.name;
+  }
+
+  if (game.placeId) {
+    record.placeId =
+      game.placeId;
+  }
+
+  if (game.universeId) {
+    record.universeId =
+      game.universeId;
+  }
+
+  record.lastSeen =
+    timestamp;
+
+  record.totalVisits =
+    Number(
+      record.totalVisits || 0
+    ) + 1;
+
+  if (
+    brainId
+  ) {
+
+    const id =
+      String(
+        brainId
+      );
+
+    if (
+      !Array.isArray(
+        record.brainIds
+      )
+    ) {
+      record.brainIds =
+        [];
+    }
+
+    if (
+      !record.brainIds.includes(
+        id
+      )
+    ) {
+      record.brainIds.push(
+        id
+      );
+    }
+  }
+
+  if (
+    userId
+  ) {
+
+    const id =
+      String(
+        userId
+      );
+
+    if (
+      !Array.isArray(
+        record.userIds
+      )
+    ) {
+      record.userIds =
+        [];
+    }
+
+    if (
+      !record.userIds.includes(
+        id
+      )
+    ) {
+      record.userIds.push(
+        id
+      );
+    }
+  }
+
+  markDirty();
+
+  return record;
+}
+
+
+// ============================================================
+// KNOWLEDGE NORMALIZATION
+// ============================================================
+
+function normalizeLearningKnowledge(
+  body
+) {
+
+  if (
+    !body ||
+    typeof body !== 'object'
+  ) {
+    throw new Error(
+      'Invalid knowledge payload'
+    );
+  }
+
+  const game =
+    normalizeLearningGame(
+      body.game
+    );
+
+  const topic =
+    safeString(
+      body.topic,
+      300
+    );
+
+  const lesson =
+    safeString(
+      body.lesson ||
+      body.observation ||
+      body.knowledge,
+      5000
+    );
+
+  if (!topic) {
+    throw new Error(
+      'topic is required'
+    );
+  }
+
+  if (!lesson) {
+    throw new Error(
+      'lesson is required'
+    );
+  }
+
+  let confidence =
+    Number(
+      body.confidence
+    );
+
+  if (
+    !Number.isFinite(
+      confidence
+    )
+  ) {
+    confidence = 0;
+  }
+
+  confidence =
+    Math.max(
+      0,
+      Math.min(
+        1,
+        confidence
+      )
+    );
+
+  let evidenceCount =
+    Number(
+      body.evidenceCount
+    );
+
+  if (
+    !Number.isFinite(
+      evidenceCount
+    )
+  ) {
+    evidenceCount = 1;
+  }
+
+  evidenceCount =
+    Math.max(
+      0,
+      Math.min(
+        1000,
+        Math.floor(
+          evidenceCount
+        )
+      )
+    );
+
+  const visibility =
+    body.visibility ===
+    'personal'
+      ? 'personal'
+      : body.visibility ===
+        'system'
+        ? 'system'
+        : 'shared';
+
+  /*
+   * SECURITY:
+   *
+   * Client cannot simply send:
+   *
+   * verified: true
+   *
+   * and make weak knowledge trusted.
+   *
+   * Astra requires:
+   *
+   * confidence >= 0.85
+   * evidenceCount >= 2
+   */
+
+  const verified =
+    body.verified === true &&
+    confidence >= 0.85 &&
+    evidenceCount >= 2;
+
+  const id =
+    safeString(
+      body.id ||
+      (
+        'knowledge_' +
+        Date.now() +
+        '_' +
+        Math.random()
+          .toString(36)
+          .slice(2, 9)
+      ),
+      150
+    );
+
+  return {
+
+    id,
+
+        game:
+      body.game &&
+      typeof body.game ===
+      'object'
+        ? {
+            name:
+              safeString(
+                body.game.name,
+                200
+              ),
+
+            placeId:
+              safeString(
+                body.game.placeId,
+                64
+              ),
+
+            universeId:
+              safeString(
+                body.game.universeId,
+                64
+              ),
+
+            jobId:
+              safeString(
+                body.game.jobId,
+                100
+              )
+          }
+        : null,
+
+    topic,
+
+    lesson,
+
+    confidence,
+
+    evidenceCount,
+
+    visibility,
+
+    verified,
+
+    source:
+      'generalized',
+
+    createdAt:
+      Number(
+        body.createdAt
+      ) ||
+      now(),
+
+    updatedAt:
+      now()
+  };
+}
+
+
+// ============================================================
+// SUBMIT KNOWLEDGE
+// ============================================================
+
+function submitLearningKnowledge(
+  body
+) {
+
+  ensureLearningStores();
+
+  const item =
+    normalizeLearningKnowledge(
+      body
+    );
+
+  item.sourceBrainId =
+    body.brainId
+      ? safeString(
+          body.brainId,
+          100
+        )
+      : null;
+
+  item.sourceUserId =
+    body.userId
+      ? safeUserId(
+          body.userId
+        )
+      : null;
+
+  const existing =
+    db.knowledge[
+      item.id
+    ];
+
+  if (existing) {
+
+    existing.topic =
+      item.topic;
+
+    existing.lesson =
+      item.lesson;
+
+    existing.game =
+      item.game;
+
+    existing.confidence =
+      Math.max(
+        Number(
+          existing.confidence ||
+          0
+        ),
+        item.confidence
+      );
+
+    existing.evidenceCount =
+      Math.max(
+        Number(
+          existing.evidenceCount ||
+          0
+        ),
+        item.evidenceCount
+      );
+
+    existing.visibility =
+      item.visibility;
+
+    existing.verified =
+      item.verified;
+
+    existing.updatedAt =
+      item.updatedAt;
+
+  } else {
+
+    db.knowledge[
+      item.id
+    ] = item;
+  }
+
+  let game =
+    null;
+
+  if (
+    item.game
+  ) {
+
+    game =
+      recordGameVisit(
+        item.game,
+        item.sourceBrainId,
+        item.sourceUserId
+      );
+
+    if (game) {
+
+      game.observations =
+        Number(
+          game.observations ||
+          0
+        ) + 1;
+
+      if (
+        item.verified
+      ) {
+
+        game.verifiedKnowledgeCount =
+          Number(
+            game.verifiedKnowledgeCount ||
+            0
+          ) + 1;
+
+      } else {
+
+        game.candidateKnowledgeCount =
+          Number(
+            game.candidateKnowledgeCount ||
+            0
+          ) + 1;
+      }
+    }
+  }
+
+  db.learningEvents.push({
+
+    id:
+      'learning_' +
+      Date.now() +
+      '_' +
+      Math.random()
+        .toString(36)
+        .slice(2, 8),
+
+    type:
+      item.verified
+        ? 'verified_knowledge'
+        : 'candidate_knowledge',
+
+    gameKey:
+      game
+        ? game.gameKey
+        : null,
+
+    topic:
+      item.topic,
+
+    confidence:
+      item.confidence,
+
+    evidenceCount:
+      item.evidenceCount,
+
+    visibility:
+      item.visibility,
+
+    verified:
+      item.verified,
+
+    createdAt:
+      now()
+  });
+
+  /*
+   * Keep event history bounded.
+   */
+
+  if (
+    db.learningEvents.length >
+    5000
+  ) {
+
+    db.learningEvents =
+      db.learningEvents.slice(
+        -5000
+      );
+  }
+
+  markDirty();
+
+  return {
+
+    success:
+      true,
+
+    knowledge: {
+
+      id:
+        item.id,
+
+      topic:
+        item.topic,
+
+      lesson:
+        item.lesson,
+
+      game:
+        item.game,
+
+      confidence:
+        item.confidence,
+
+      evidenceCount:
+        item.evidenceCount,
+
+      visibility:
+        item.visibility,
+
+      verified:
+        item.verified,
+
+      createdAt:
+        item.createdAt,
+
+      updatedAt:
+        item.updatedAt
+    }
+  };
+}
+
+
+// ============================================================
+// SHARED KNOWLEDGE QUERY
+// ============================================================
+
+function getSharedLearningKnowledge(
+  options = {}
+) {
+
+  ensureLearningStores();
+
+  const query =
+    String(
+      options.q ||
+      ''
+    )
+      .toLowerCase()
+      .trim();
+
+  const gameKey =
+    String(
+      options.gameKey ||
+      ''
+    )
+      .trim();
+
+  let list =
+    Object.values(
+      db.knowledge
+    );
+
+  /*
+   * Personal knowledge never enters
+   * the collective knowledge result.
+   */
+
+  list =
+    list.filter(
+      item =>
+        item.visibility !==
+        'personal'
+    );
+
+  /*
+   * Shared knowledge requires verification.
+   * System knowledge can be returned directly.
+   */
+
+  list =
+    list.filter(
+      item =>
+        item.verified === true ||
+        item.visibility ===
+        'system'
+    );
+
+  if (query) {
+
+    list =
+      list.filter(
+        item => {
+
+          const text =
+            [
+              item.topic,
+              item.lesson,
+              item.game?.name
+            ]
+              .join(' ')
+              .toLowerCase();
+
+          return text.includes(
+            query
+          );
+        }
+      );
+  }
+
+  if (gameKey) {
+
+    list =
+      list.filter(
+        item =>
+          getLearningGameKey(
+            item.game
+          ) ===
+          gameKey
+      );
+  }
+
+  list.sort(
+    (a, b) =>
+      Number(
+        b.updatedAt || 0
+      ) -
+      Number(
+        a.updatedAt || 0
+      )
+  );
+
+  return list.map(
+    item => ({
+
+      id:
+        item.id,
+
+      topic:
+        item.topic,
+
+      lesson:
+        item.lesson,
+
+      game:
+        item.game ||
+        null,
+
+      confidence:
+        Number(
+          item.confidence ||
+          0
+        ),
+
+      evidenceCount:
+        Number(
+          item.evidenceCount ||
+          0
+        ),
+
+      visibility:
+        item.visibility,
+
+      verified:
+        item.verified ===
+        true,
+
+      createdAt:
+        item.createdAt ||
+        null,
+
+      updatedAt:
+        item.updatedAt ||
+        null
+    })
+  );
+}
+
+
+// ============================================================
+// GAME LEARNING SCORE
+// ============================================================
+
+function calculateGameLearningScore(
+  gameKey
+) {
+
+  const knowledge =
+    Object.values(
+      db.knowledge
+    )
+      .filter(
+        item =>
+          item.visibility !==
+          'personal'
+      )
+      .filter(
+        item =>
+          item.verified ===
+          true
+      )
+      .filter(
+        item =>
+          getLearningGameKey(
+            item.game
+          ) ===
+          gameKey
+      );
+
+  const topics =
+    new Set();
+
+  for (
+    const item of knowledge
+  ) {
+
+    const topic =
+      String(
+        item.topic ||
+        ''
+      )
+        .trim()
+        .toLowerCase();
+
+    if (topic) {
+      topics.add(
+        topic
+      );
+    }
+  }
+
+  /*
+   * Transparent dashboard metric.
+   *
+   * This does NOT mean:
+   * "Astra understands X% of the game."
+   *
+   * It measures breadth of verified topics.
+   */
+
+  return Math.min(
+    100,
+    topics.size * 10
+  );
+}
+
+
+// ============================================================
+// DASHBOARD GAME SUMMARY
+// ============================================================
+
+function buildLearningGameSummary(
+  game
+) {
+
+  const verifiedKnowledge =
+    Object.values(
+      db.knowledge
+    )
+      .filter(
+        item =>
+          item.visibility !==
+          'personal'
+      )
+      .filter(
+        item =>
+          item.verified ===
+          true
+      )
+      .filter(
+        item =>
+          getLearningGameKey(
+            item.game
+          ) ===
+          game.gameKey
+      );
+
+  const learningScore =
+    calculateGameLearningScore(
+      game.gameKey
+    );
+
+  let learningStatus =
+    'discovered';
+
+  if (
+    verifiedKnowledge.length >
+    0
+  ) {
+
+    learningStatus =
+      learningScore >= 80
+        ? 'well-learned'
+        : 'learning';
+  }
+
+  return {
+
+    gameKey:
+      game.gameKey,
+
+    name:
+      game.name,
+
+    placeId:
+      game.placeId,
+
+    universeId:
+      game.universeId,
+
+    firstSeen:
+      game.firstSeen,
+
+    lastSeen:
+      game.lastSeen,
+
+    totalVisits:
+      Number(
+        game.totalVisits ||
+        0
+      ),
+
+    brainCount:
+      Array.isArray(
+        game.brainIds
+      )
+        ? game.brainIds.length
+        : 0,
+
+    playerCount:
+      Array.isArray(
+        game.userIds
+      )
+        ? game.userIds.length
+        : 0,
+
+    observations:
+      Number(
+        game.observations ||
+        0
+      ),
+
+    verifiedKnowledgeCount:
+      verifiedKnowledge.length,
+
+    candidateKnowledgeCount:
+      Number(
+        game.candidateKnowledgeCount ||
+        0
+      ),
+
+    learningScore,
+
+    learningStatus
+  };
+}
+
+
+// ============================================================
+// DASHBOARD GAMES
+// ============================================================
+
+function getDashboardGames() {
+
+  ensureLearningStores();
+
+  return Object.values(
+    db.games
+  )
+    .map(
+      buildLearningGameSummary
+    )
+    .sort(
+      (a, b) =>
+        Number(
+          b.lastSeen ||
+          0
+        ) -
+        Number(
+          a.lastSeen ||
+          0
+        )
+    );
+}
+
+
+// ============================================================
+// DASHBOARD LEARNING SUMMARY
+// ============================================================
+
+function getDashboardLearningSummary() {
+
+  ensureLearningStores();
+
+  const games =
+    getDashboardGames();
+
+  const knowledge =
+    getSharedLearningKnowledge();
+
+  const candidateKnowledge =
+    Object.values(
+      db.knowledge
+    )
+      .filter(
+        item =>
+          item.visibility !==
+          'personal'
+      )
+      .filter(
+        item =>
+          item.verified !==
+          true
+      )
+      .length;
+
+  const personalKnowledge =
+    Object.values(
+      db.knowledge
+    )
+      .filter(
+        item =>
+          item.visibility ===
+          'personal'
+      )
+      .length;
+
+  return {
+
+    totals: {
+
+      brains:
+        Object.keys(
+          db.brains || {}
+        ).length,
+
+      players:
+        Object.keys(
+          db.players || {}
+        ).length,
+
+      games:
+        games.length,
+
+      knowledge:
+        knowledge.length,
+
+      verifiedKnowledge:
+        knowledge.length,
+
+      candidateKnowledge,
+
+      personalKnowledge,
+
+      learningEvents:
+        db.learningEvents.length
+    },
+
+    games,
+
+    knowledge:
+      knowledge.slice(
+        0,
+        200
+      )
+  };
 }
 
 // ============================================================
@@ -1271,6 +2504,21 @@ function updatePlayerProfile(
         body.game.jobId,
         100
       );
+  // ==========================================================
+  // ASTRA BRAIN V6 — RECORD GAME DISCOVERY
+  // ==========================================================
+
+  if (
+    body.game &&
+    typeof body.game ===
+    'object'
+  ) {
+
+    recordGameVisit(
+      body.game,
+      brainId,
+      userId
+    );
   }
 
   const deviceStats =
@@ -2781,6 +4029,277 @@ async function handler(
           corsHeaders
         );
       }
+    }
+
+    // ========================================================
+    // ASTRA BRAIN V6: LEARNING SUBMIT
+    // ========================================================
+
+    if (
+      pathname ===
+      '/api/brain/learning/submit'
+      &&
+      method ===
+      'POST'
+    ) {
+
+      if (
+        !verifyBrain(req)
+      ) {
+
+        return json(
+          res,
+          401,
+          {
+            error:
+              'Invalid or missing Brain API secret'
+          },
+          corsHeaders
+        );
+      }
+
+      const body =
+        await readBody(req);
+
+      try {
+
+        const result =
+          submitLearningKnowledge(
+            body
+          );
+
+        saveDB(true);
+
+        return json(
+          res,
+          200,
+          result,
+          corsHeaders
+        );
+
+      } catch (e) {
+
+        return json(
+          res,
+          400,
+          {
+            error:
+              e.message
+          },
+          corsHeaders
+        );
+      }
+    }
+
+
+    // ========================================================
+    // ASTRA BRAIN V6: LEARNING RECALL
+    // ========================================================
+
+    if (
+      pathname ===
+      '/api/brain/learning/recall'
+      &&
+      method ===
+      'POST'
+    ) {
+
+      if (
+        !verifyBrain(req)
+      ) {
+
+        return json(
+          res,
+          401,
+          {
+            error:
+              'Invalid or missing Brain API secret'
+          },
+          corsHeaders
+        );
+      }
+
+      const body =
+        await readBody(req);
+
+      const query =
+        body.query ||
+        body.topic ||
+        body.game?.name ||
+        '';
+
+      const gameKey =
+        body.game
+          ? getLearningGameKey(
+              normalizeLearningGame(
+                body.game
+              )
+            )
+          : '';
+
+      return json(
+        res,
+        200,
+        {
+          success:
+            true,
+
+          knowledge:
+            getSharedLearningKnowledge(
+              {
+                q:
+                  query,
+
+                gameKey:
+                  gameKey
+              }
+            )
+        },
+        corsHeaders
+      );
+    }
+
+
+    // ========================================================
+    // DASHBOARD: COLLECTIVE KNOWLEDGE
+    // ========================================================
+
+    if (
+      pathname ===
+      '/api/dashboard/knowledge'
+      &&
+      method ===
+      'GET'
+    ) {
+
+      if (
+        !isAuth(req)
+      ) {
+
+        return json(
+          res,
+          401,
+          {
+            error:
+              'Unauthorized'
+          },
+          corsHeaders
+        );
+      }
+
+      const query =
+        url.searchParams.get(
+          'q'
+        ) || '';
+
+      const gameKey =
+        url.searchParams.get(
+          'gameKey'
+        ) || '';
+
+      return json(
+        res,
+        200,
+        {
+          success:
+            true,
+
+          knowledge:
+            getSharedLearningKnowledge(
+              {
+                q:
+                  query,
+
+                gameKey:
+                  gameKey
+              }
+            )
+        },
+        corsHeaders
+      );
+    }
+
+
+    // ========================================================
+    // DASHBOARD: DISCOVERED GAMES
+    // ========================================================
+
+    if (
+      pathname ===
+      '/api/dashboard/games'
+      &&
+      method ===
+      'GET'
+    ) {
+
+      if (
+        !isAuth(req)
+      ) {
+
+        return json(
+          res,
+          401,
+          {
+            error:
+              'Unauthorized'
+          },
+          corsHeaders
+        );
+      }
+
+      return json(
+        res,
+        200,
+        {
+          success:
+            true,
+
+          games:
+            getDashboardGames()
+        },
+        corsHeaders
+      );
+    }
+
+
+    // ========================================================
+    // DASHBOARD: COLLECTIVE LEARNING
+    // ========================================================
+
+    if (
+      pathname ===
+      '/api/dashboard/learning'
+      &&
+      method ===
+      'GET'
+    ) {
+
+      if (
+        !isAuth(req)
+      ) {
+
+        return json(
+          res,
+          401,
+          {
+            error:
+              'Unauthorized'
+          },
+          corsHeaders
+        );
+      }
+
+      return json(
+        res,
+        200,
+        {
+          success:
+            true,
+
+          ...getDashboardLearningSummary()
+        },
+        corsHeaders
+      );
     }
 
     // ========================================================

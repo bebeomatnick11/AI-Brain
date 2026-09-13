@@ -1,6 +1,6 @@
 /**
  * ============================================================
- * ASTRA BRAIN REGISTRY V2
+ * ASTRA BRAIN REGISTRY V6
  * Backward-compatible Player Intelligence Registry
  * ============================================================
  *
@@ -14,6 +14,7 @@
  *
  * Thêm:
  * - Player profiles
+ * - Player description
  * - Username history
  * - DisplayName history
  * - Avatar history
@@ -23,6 +24,23 @@
  * - First/last seen
  * - Player telemetry
  * - Player profile API
+ *
+ * ASTRA BRAIN V6:
+ * - Collective Intelligence
+ * - Game discovery
+ * - Shared knowledge
+ * - Personal knowledge
+ * - System knowledge
+ * - Learning events
+ * - Verified knowledge
+ * - Game learning score
+ *
+ * ROBLOX GAME METADATA:
+ * - Game description
+ * - Game icon
+ * - Game thumbnail
+ * - Universe ID resolution
+ * - Metadata caching
  *
  * Node 18+
  * Zero external runtime dependencies
@@ -68,6 +86,16 @@ const NODE_ENV =
   process.env.NODE_ENV || 'development';
 
 // ============================================================
+// ROBLOX GAME METADATA CONFIG
+// ============================================================
+
+const ROBLOX_GAME_METADATA_TTL_MS =
+  30 * 60 * 1000;
+
+const ROBLOX_GAME_METADATA_TIMEOUT_MS =
+  8000;
+
+// ============================================================
 // STORAGE
 // ============================================================
 
@@ -83,72 +111,90 @@ const dbPath =
   path.join(dataDir, 'brains.json');
 
 function createEmptyDB() {
+
   return {
+
     brains: {},
+
     players: {},
+
     playerSessions: {},
+
     sessions: {},
+
     loginAttempts: {},
 
     // ========================================================
     // ASTRA BRAIN V6 — COLLECTIVE INTELLIGENCE
     // ========================================================
 
-    // Games discovered through Brain/player activity.
     games: {},
 
-    // Learned knowledge.
-    //
-    // Visibility:
-    // - personal = private to its owner
-    // - shared   = generalized knowledge usable by other Brains
-    // - system   = Astra-wide system knowledge
     knowledge: {},
 
-    // Learning event history.
     learningEvents: []
   };
 }
 
 function loadDB() {
+
   try {
+
     if (!fs.existsSync(dbPath)) {
+
       return createEmptyDB();
     }
 
     const data =
       JSON.parse(
-        fs.readFileSync(dbPath, 'utf8')
+        fs.readFileSync(
+          dbPath,
+          'utf8'
+        )
       );
 
     return {
-  brains: data.brains || {},
-  players: data.players || {},
-  playerSessions: data.playerSessions || {},
-  sessions: data.sessions || {},
-  loginAttempts: data.loginAttempts || {},
 
-  // ========================================================
-  // ASTRA BRAIN V6 — COLLECTIVE INTELLIGENCE
-  // ========================================================
+      brains:
+        data.brains || {},
 
-  games:
-    data.games &&
-    typeof data.games === 'object'
-      ? data.games
-      : {},
+      players:
+        data.players || {},
 
-  knowledge:
-    data.knowledge &&
-    typeof data.knowledge === 'object'
-      ? data.knowledge
-      : {},
+      playerSessions:
+        data.playerSessions || {},
 
-  learningEvents:
-    Array.isArray(data.learningEvents)
-      ? data.learningEvents
-      : []
-};
+      sessions:
+        data.sessions || {},
+
+      loginAttempts:
+        data.loginAttempts || {},
+
+      // ======================================================
+      // ASTRA BRAIN V6
+      // ======================================================
+
+      games:
+        data.games &&
+        typeof data.games ===
+        'object'
+          ? data.games
+          : {},
+
+      knowledge:
+        data.knowledge &&
+        typeof data.knowledge ===
+        'object'
+          ? data.knowledge
+          : {},
+
+      learningEvents:
+        Array.isArray(
+          data.learningEvents
+        )
+          ? data.learningEvents
+          : []
+    };
 
   } catch (e) {
 
@@ -161,28 +207,43 @@ function loadDB() {
   }
 }
 
-let db = loadDB();
+let db =
+  loadDB();
 
-let dirty = false;
+let dirty =
+  false;
 
 function markDirty() {
-  dirty = true;
+
+  dirty =
+    true;
 }
 
-function saveDB(force = false) {
+function saveDB(
+  force = false
+) {
 
-  if (!force && !dirty) {
+  if (
+    !force &&
+    !dirty
+  ) {
+
     return;
   }
 
   try {
 
     const tmp =
-      dbPath + '.tmp';
+      dbPath +
+      '.tmp';
 
     fs.writeFileSync(
       tmp,
-      JSON.stringify(db, null, 2),
+      JSON.stringify(
+        db,
+        null,
+        2
+      ),
       'utf8'
     );
 
@@ -191,7 +252,8 @@ function saveDB(force = false) {
       dbPath
     );
 
-    dirty = false;
+    dirty =
+      false;
 
   } catch (e) {
 
@@ -203,7 +265,8 @@ function saveDB(force = false) {
 }
 
 setInterval(
-  () => saveDB(false),
+  () =>
+    saveDB(false),
   SAVE_INTERVAL_MS
 );
 
@@ -212,55 +275,87 @@ setInterval(
 // ============================================================
 
 function now() {
+
   return Date.now();
 }
 
-function safeString(value, max = 200) {
+function safeString(
+  value,
+  max = 200
+) {
 
   if (
-    value === undefined ||
-    value === null
+    value ===
+      undefined ||
+    value ===
+      null
   ) {
+
     return null;
   }
 
   return String(value)
-    .slice(0, max);
+    .slice(
+      0,
+      max
+    );
 }
 
-function safeUserId(value) {
+function safeUserId(
+  value
+) {
 
   const id =
-    String(value || '')
+    String(
+      value || ''
+    )
       .trim();
 
-  if (!/^\d+$/.test(id)) {
+  if (
+    !/^\d+$/.test(
+      id
+    )
+  ) {
+
     return null;
   }
 
-  return id.slice(0, 32);
+  return id.slice(
+    0,
+    32
+  );
 }
 
-function hashIp(ip) {
+function hashIp(
+  ip
+) {
 
   if (!ip) {
+
     return 'unknown';
   }
 
   return crypto
-    .createHash('sha256')
+    .createHash(
+      'sha256'
+    )
     .update(
       String(ip) +
       SESSION_SECRET
     )
     .digest('hex')
-    .slice(0, 16);
+    .slice(
+      0,
+      16
+    );
 }
 
 function genId() {
 
   return crypto
-    .randomBytes(24)
+    .randomBytes(
+      24
+    )
     .toString('hex');
 }
 
@@ -269,7 +364,9 @@ function genSessionId() {
   return (
     'ps_' +
     crypto
-      .randomBytes(18)
+      .randomBytes(
+        18
+      )
       .toString('hex')
   );
 }
@@ -278,47 +375,63 @@ function genSessionId() {
 // COOKIES / AUTH
 // ============================================================
 
-function parseCookies(header) {
+function parseCookies(
+  header
+) {
 
-  const out = {};
+  const out =
+    {};
 
   if (!header) {
+
     return out;
   }
 
   header
     .split(';')
-    .forEach(part => {
+    .forEach(
+      part => {
 
-      const [
-        key,
-        ...rest
-      ] =
-        part
-          .trim()
-          .split('=');
+        const [
+          key,
+          ...rest
+        ] =
+          part
+            .trim()
+            .split('=');
 
-      if (!key) {
-        return;
+        if (!key) {
+
+          return;
+        }
+
+        out[key] =
+          decodeURIComponent(
+            rest.join('=')
+          );
       }
-
-      out[key] =
-        decodeURIComponent(
-          rest.join('=')
-        );
-    });
+    );
 
   return out;
 }
 
-function getClientIp(req) {
+function getClientIp(
+  req
+) {
 
   return (
-    (req.headers['x-forwarded-for'] || '')
+    (
+      req.headers[
+        'x-forwarded-for'
+      ] ||
+      ''
+    )
       .split(',')[0]
       .trim()
     ||
-    req.headers['x-real-ip']
+    req.headers[
+      'x-real-ip'
+    ]
     ||
     req.socket.remoteAddress
     ||
@@ -332,21 +445,27 @@ function cleanSessions() {
     now();
 
   for (
-    const id of Object.keys(db.sessions)
+    const id of Object.keys(
+      db.sessions
+    )
   ) {
 
     if (
-      db.sessions[id].expiresAt <
+      db.sessions[id]
+        .expiresAt <
       timestamp
     ) {
 
       delete db.sessions[id];
+
       markDirty();
     }
   }
 }
 
-function isAuth(req) {
+function isAuth(
+  req
+) {
 
   const cookies =
     parseCookies(
@@ -357,6 +476,7 @@ function isAuth(req) {
     cookies.session;
 
   if (!sid) {
+
     return false;
   }
 
@@ -367,7 +487,8 @@ function isAuth(req) {
 
   return !!(
     session &&
-    session.expiresAt > now()
+    session.expiresAt >
+      now()
   );
 }
 
@@ -390,12 +511,15 @@ function createSession() {
   };
 
   markDirty();
+
   saveDB(true);
 
   return sid;
 }
 
-function destroySession(sid) {
+function destroySession(
+  sid
+) {
 
   if (
     sid &&
@@ -405,6 +529,7 @@ function destroySession(sid) {
     delete db.sessions[sid];
 
     markDirty();
+
     saveDB(true);
   }
 }
@@ -413,10 +538,14 @@ function destroySession(sid) {
 // BRAIN SECRET
 // ============================================================
 
-function getBrainSecret(req) {
+function getBrainSecret(
+  req
+) {
 
   return (
-    req.headers['x-brain-secret']
+    req.headers[
+      'x-brain-secret'
+    ]
     ||
     (
       req.headers.authorization ||
@@ -428,7 +557,9 @@ function getBrainSecret(req) {
   );
 }
 
-function verifyBrain(req) {
+function verifyBrain(
+  req
+) {
 
   return (
     getBrainSecret(req) ===
@@ -440,84 +571,127 @@ function verifyBrain(req) {
 // RATE LIMIT
 // ============================================================
 
-function checkRate(ipHash) {
+function checkRate(
+  ipHash
+) {
 
   const timestamp =
     now();
 
   const row =
-    db.loginAttempts[ipHash];
+    db.loginAttempts[
+      ipHash
+    ];
 
   if (!row) {
-    return { ok: true };
-  }
-
-  if (
-    timestamp - row.last >
-    15 * 60 * 1000
-  ) {
-
-    delete db.loginAttempts[ipHash];
-
-    markDirty();
-
-    return { ok: true };
-  }
-
-  if (row.count >= 5) {
 
     return {
-      ok: false,
-      retry: Math.ceil(
-        (
-          15 * 60 * 1000 -
-          (
-            timestamp -
-            row.last
-          )
-        ) / 1000
-      )
+      ok: true
     };
   }
 
-  return { ok: true };
+  if (
+    timestamp -
+      row.last >
+    15 * 60 * 1000
+  ) {
+
+    delete db.loginAttempts[
+      ipHash
+    ];
+
+    markDirty();
+
+    return {
+      ok: true
+    };
+  }
+
+  if (
+    row.count >=
+    5
+  ) {
+
+    return {
+
+      ok: false,
+
+      retry:
+        Math.ceil(
+          (
+            15 * 60 * 1000 -
+            (
+              timestamp -
+              row.last
+            )
+          ) /
+          1000
+        )
+    };
+  }
+
+  return {
+    ok: true
+  };
 }
 
-function failLogin(ipHash) {
+function failLogin(
+  ipHash
+) {
 
   const timestamp =
     now();
 
   if (
-    db.loginAttempts[ipHash]
+    db.loginAttempts[
+      ipHash
+    ]
   ) {
 
-    db.loginAttempts[ipHash].count++;
+    db.loginAttempts[
+      ipHash
+    ].count++;
 
-    db.loginAttempts[ipHash].last =
+    db.loginAttempts[
+      ipHash
+    ].last =
       timestamp;
 
   } else {
 
-    db.loginAttempts[ipHash] = {
-      count: 1,
-      last: timestamp
+    db.loginAttempts[
+      ipHash
+    ] = {
+
+      count:
+        1,
+
+      last:
+        timestamp
     };
   }
 
   markDirty();
+
   saveDB(true);
 }
 
-function clearFail(ipHash) {
+function clearFail(
+  ipHash
+) {
 
   if (
-    db.loginAttempts[ipHash]
+    db.loginAttempts[
+      ipHash
+    ]
   ) {
 
-    delete db.loginAttempts[ipHash];
+    delete db.loginAttempts[
+      ipHash
+    ];
 
     markDirty();
+
     saveDB(true);
   }
 }
@@ -526,35 +700,62 @@ function clearFail(ipHash) {
 // SKILLS
 // ============================================================
 
-function parseSkills(value) {
+function parseSkills(
+  value
+) {
 
-  if (Array.isArray(value)) {
+  if (
+    Array.isArray(
+      value
+    )
+  ) {
 
     return value
       .map(
-        x => String(x).slice(0, 80)
+        x =>
+          String(x)
+            .slice(
+              0,
+              80
+            )
       )
-      .slice(0, 50);
+      .slice(
+        0,
+        50
+      );
   }
 
   if (
-    typeof value === 'string'
+    typeof value ===
+    'string'
   ) {
 
     try {
 
       const parsed =
-        JSON.parse(value);
+        JSON.parse(
+          value
+        );
 
       if (
-        Array.isArray(parsed)
+        Array.isArray(
+          parsed
+        )
       ) {
 
         return parsed
           .map(
-            x => String(x).slice(0, 80)
+            x =>
+              String(x)
+                .slice(
+                  0,
+                  80
+                )
           )
-          .slice(0, 50);
+          .slice(
+            0,
+            50
+          );
       }
 
     } catch {}
@@ -575,40 +776,54 @@ function json(
 ) {
 
   const body =
-    JSON.stringify(data);
+    JSON.stringify(
+      data
+    );
 
   res.writeHead(
     status,
     {
+
       'Content-Type':
         'application/json; charset=utf-8',
 
       'Content-Length':
-        Buffer.byteLength(body),
+        Buffer.byteLength(
+          body
+        ),
 
       ...extraHeaders
     }
   );
 
-  res.end(body);
+  res.end(
+    body
+  );
 }
 
 // ============================================================
 // REQUEST BODY
 // ============================================================
 
-function readBody(req) {
+function readBody(
+  req
+) {
 
   return new Promise(
-    (resolve, reject) => {
+    (
+      resolve,
+      reject
+    ) => {
 
-      let data = '';
+      let data =
+        '';
 
       req.on(
         'data',
         chunk => {
 
-          data += chunk;
+          data +=
+            chunk;
 
           if (
             data.length >
@@ -631,14 +846,18 @@ function readBody(req) {
         () => {
 
           if (!data) {
+
             resolve({});
+
             return;
           }
 
           try {
 
             resolve(
-              JSON.parse(data)
+              JSON.parse(
+                data
+              )
             );
 
           } catch {
@@ -664,15 +883,19 @@ function ensureLearningStores() {
 
   if (
     !db.games ||
-    typeof db.games !== 'object'
+    typeof db.games !==
+      'object'
   ) {
+
     db.games = {};
   }
 
   if (
     !db.knowledge ||
-    typeof db.knowledge !== 'object'
+    typeof db.knowledge !==
+      'object'
   ) {
+
     db.knowledge = {};
   }
 
@@ -681,10 +904,11 @@ function ensureLearningStores() {
       db.learningEvents
     )
   ) {
-    db.learningEvents = [];
+
+    db.learningEvents =
+      [];
   }
 }
-
 
 // ============================================================
 // GAME NORMALIZATION
@@ -696,14 +920,17 @@ function normalizeLearningGame(
 
   if (
     !input ||
-    typeof input !== 'object'
+    typeof input !==
+      'object'
   ) {
+
     return null;
   }
 
   const game =
     input.game &&
-    typeof input.game === 'object'
+    typeof input.game ===
+      'object'
       ? input.game
       : input;
 
@@ -739,15 +966,35 @@ function normalizeLearningGame(
       120
     );
 
+  const description =
+    safeString(
+      game.description,
+      10000
+    );
+
+  const iconUrl =
+    safeString(
+      game.iconUrl,
+      2000
+    );
+
+  const thumbnailUrl =
+    safeString(
+      game.thumbnailUrl,
+      2000
+    );
+
   if (
     !name &&
     !placeId &&
     !universeId
   ) {
+
     return null;
   }
 
   return {
+
     name:
       name ||
       'Unknown Game',
@@ -762,10 +1009,21 @@ function normalizeLearningGame(
 
     jobId:
       jobId ||
+      null,
+
+    description:
+      description ||
+      null,
+
+    iconUrl:
+      iconUrl ||
+      null,
+
+    thumbnailUrl:
+      thumbnailUrl ||
       null
   };
 }
-
 
 // ============================================================
 // GAME KEY
@@ -776,12 +1034,14 @@ function getLearningGameKey(
 ) {
 
   if (!game) {
+
     return null;
   }
 
   if (
     game.universeId
   ) {
+
     return (
       'universe:' +
       game.universeId
@@ -791,6 +1051,7 @@ function getLearningGameKey(
   if (
     game.placeId
   ) {
+
     return (
       'place:' +
       game.placeId
@@ -825,6 +1086,423 @@ function getLearningGameKey(
   );
 }
 
+// ============================================================
+// ROBLOX API FETCH
+// ============================================================
+
+async function fetchJsonWithTimeout(
+  url,
+  timeoutMs =
+    ROBLOX_GAME_METADATA_TIMEOUT_MS
+) {
+
+  const controller =
+    new AbortController();
+
+  const timer =
+    setTimeout(
+      () =>
+        controller.abort(),
+      timeoutMs
+    );
+
+  try {
+
+    const response =
+      await fetch(
+        url,
+        {
+
+          headers: {
+
+            Accept:
+              'application/json'
+          },
+
+          signal:
+            controller.signal
+        }
+      );
+
+    if (
+      !response.ok
+    ) {
+
+      throw new Error(
+        `Roblox API HTTP ${response.status}`
+      );
+    }
+
+    return await response.json();
+
+  } finally {
+
+    clearTimeout(
+      timer
+    );
+  }
+}
+
+// ============================================================
+// RESOLVE UNIVERSE FROM PLACE
+// ============================================================
+
+async function resolveUniverseIdFromPlaceId(
+  placeId
+) {
+
+  if (!placeId) {
+
+    return null;
+  }
+
+  const data =
+    await fetchJsonWithTimeout(
+      `https://apis.roblox.com/universes/v1/places/${encodeURIComponent(
+        placeId
+      )}/universe`
+    );
+
+  return data &&
+    data.universeId
+    ? String(
+        data.universeId
+      )
+    : null;
+}
+
+// ============================================================
+// FETCH ROBLOX GAME METADATA
+// ============================================================
+
+async function fetchRobloxGameMetadata(
+  game
+) {
+
+  let universeId =
+    game &&
+    game.universeId
+      ? String(
+          game.universeId
+        )
+      : null;
+
+  if (
+    !universeId &&
+    game &&
+    game.placeId
+  ) {
+
+    try {
+
+      universeId =
+        await resolveUniverseIdFromPlaceId(
+          String(
+            game.placeId
+          )
+        );
+
+    } catch (e) {
+
+      console.error(
+        'Roblox universe resolve error:',
+        e.message
+      );
+    }
+  }
+
+  if (!universeId) {
+
+    return null;
+  }
+
+  let info =
+    null;
+
+  let iconUrl =
+    null;
+
+  let thumbnailUrl =
+    null;
+
+  // ==========================================================
+  // GAME INFORMATION
+  // ==========================================================
+
+  try {
+
+    const data =
+      await fetchJsonWithTimeout(
+        `https://games.roblox.com/v1/games?universeIds=${encodeURIComponent(
+          universeId
+        )}`
+      );
+
+    info =
+      Array.isArray(
+        data &&
+        data.data
+      )
+        ? data.data[0]
+        : null;
+
+  } catch (e) {
+
+    console.error(
+      'Roblox game metadata error:',
+      e.message
+    );
+  }
+
+  // ==========================================================
+  // GAME ICON
+  // ==========================================================
+
+  try {
+
+    const data =
+      await fetchJsonWithTimeout(
+        `https://thumbnails.roblox.com/v1/games/icons?universeIds=${encodeURIComponent(
+          universeId
+        )}&returnPolicy=PlaceHolder&size=512x512&format=Png&isCircular=false`
+      );
+
+    iconUrl =
+      data &&
+      Array.isArray(
+        data.data
+      )
+        ? data.data[0]?.imageUrl ||
+          null
+        : null;
+
+  } catch (e) {
+
+    console.error(
+      'Roblox game icon error:',
+      e.message
+    );
+  }
+
+  // ==========================================================
+  // GAME THUMBNAIL
+  // ==========================================================
+
+  try {
+
+    const data =
+      await fetchJsonWithTimeout(
+        `https://thumbnails.roblox.com/v1/games/multiget/thumbnails?universeIds=${encodeURIComponent(
+          universeId
+        )}&countPerUniverse=1&defaults=true&size=768x432&format=Png&isCircular=false`
+      );
+
+    const first =
+      Array.isArray(
+        data &&
+        data.data
+      )
+        ? data.data[0]
+        : null;
+
+    if (
+      first &&
+      Array.isArray(
+        first.thumbnails
+      ) &&
+      first.thumbnails.length
+    ) {
+
+      thumbnailUrl =
+        first.thumbnails[0]
+          ?.imageUrl ||
+        null;
+    }
+
+  } catch (e) {
+
+    console.error(
+      'Roblox game thumbnail error:',
+      e.message
+    );
+  }
+
+  return {
+
+    universeId,
+
+    name:
+      safeString(
+        info?.name ||
+        game?.name,
+        200
+      ),
+
+    description:
+      safeString(
+        info?.description,
+        10000
+      ),
+
+    rootPlaceId:
+      info?.rootPlaceId
+        ? String(
+            info.rootPlaceId
+          )
+        : safeString(
+            game?.placeId,
+            64
+          ),
+
+    iconUrl:
+      safeString(
+        iconUrl,
+        2000
+      ),
+
+    thumbnailUrl:
+      safeString(
+        thumbnailUrl,
+        2000
+      ),
+
+    fetchedAt:
+      now()
+  };
+}
+
+// ============================================================
+// QUEUE GAME METADATA REFRESH
+// ============================================================
+
+function queueGameMetadataRefresh(
+  record
+) {
+
+  if (!record) {
+
+    return;
+  }
+
+  if (
+    record.metadataRefreshing
+  ) {
+
+    return;
+  }
+
+  const fetchedAt =
+    Number(
+      record.metadataFetchedAt ||
+      0
+    );
+
+  if (
+    fetchedAt &&
+    now() -
+      fetchedAt <
+      ROBLOX_GAME_METADATA_TTL_MS
+  ) {
+
+    return;
+  }
+
+  record.metadataRefreshing =
+    true;
+
+  fetchRobloxGameMetadata(
+    record
+  )
+    .then(
+      metadata => {
+
+        if (!metadata) {
+
+          return;
+        }
+
+        if (
+          metadata.name
+        ) {
+
+          record.name =
+            metadata.name;
+        }
+
+        if (
+          metadata.rootPlaceId
+        ) {
+
+          record.placeId =
+            metadata.rootPlaceId;
+        }
+
+        if (
+          metadata.universeId
+        ) {
+
+          record.universeId =
+            metadata.universeId;
+        }
+
+        if (
+          metadata.description !==
+          null
+        ) {
+
+          record.description =
+            metadata.description;
+        }
+
+        if (
+          metadata.iconUrl
+        ) {
+
+          record.iconUrl =
+            metadata.iconUrl;
+        }
+
+        if (
+          metadata.thumbnailUrl
+        ) {
+
+          record.thumbnailUrl =
+            metadata.thumbnailUrl;
+        }
+
+        record.metadataFetchedAt =
+          metadata.fetchedAt;
+
+        markDirty();
+      }
+    )
+    .catch(
+      error => {
+
+        console.error(
+          'Roblox game metadata refresh error:',
+          error.message
+        );
+
+        /*
+         * Prevent immediate repeated
+         * requests when Roblox is unavailable.
+         */
+
+        record.metadataFetchedAt =
+          now();
+
+        markDirty();
+      }
+    )
+    .finally(
+      () => {
+
+        record.metadataRefreshing =
+          false;
+      }
+    );
+}
 
 // ============================================================
 // GAME RECORD
@@ -844,6 +1522,7 @@ function recordGameVisit(
     );
 
   if (!game) {
+
     return null;
   }
 
@@ -853,6 +1532,7 @@ function recordGameVisit(
     );
 
   if (!gameKey) {
+
     return null;
   }
 
@@ -878,6 +1558,28 @@ function recordGameVisit(
 
       universeId:
         game.universeId,
+
+      // ======================================================
+      // GAME METADATA
+      // ======================================================
+
+      description:
+        game.description ||
+        null,
+
+      iconUrl:
+        game.iconUrl ||
+        null,
+
+      thumbnailUrl:
+        game.thumbnailUrl ||
+        null,
+
+      metadataFetchedAt:
+        0,
+
+      metadataRefreshing:
+        false,
 
       firstSeen:
         timestamp,
@@ -909,19 +1611,58 @@ function recordGameVisit(
     ] = record;
   }
 
-  if (game.name) {
+  if (
+    game.name
+  ) {
+
     record.name =
       game.name;
   }
 
-  if (game.placeId) {
+  if (
+    game.placeId
+  ) {
+
     record.placeId =
       game.placeId;
   }
 
-  if (game.universeId) {
+  if (
+    game.universeId
+  ) {
+
     record.universeId =
       game.universeId;
+  }
+
+  /*
+   * Client-provided metadata can be
+   * preserved, but Roblox metadata is
+   * preferred when available.
+   */
+
+  if (
+    game.description
+  ) {
+
+    record.description =
+      game.description;
+  }
+
+  if (
+    game.iconUrl
+  ) {
+
+    record.iconUrl =
+      game.iconUrl;
+  }
+
+  if (
+    game.thumbnailUrl
+  ) {
+
+    record.thumbnailUrl =
+      game.thumbnailUrl;
   }
 
   record.lastSeen =
@@ -929,7 +1670,8 @@ function recordGameVisit(
 
   record.totalVisits =
     Number(
-      record.totalVisits || 0
+      record.totalVisits ||
+      0
     ) + 1;
 
   if (
@@ -946,6 +1688,7 @@ function recordGameVisit(
         record.brainIds
       )
     ) {
+
       record.brainIds =
         [];
     }
@@ -955,6 +1698,7 @@ function recordGameVisit(
         id
       )
     ) {
+
       record.brainIds.push(
         id
       );
@@ -975,6 +1719,7 @@ function recordGameVisit(
         record.userIds
       )
     ) {
+
       record.userIds =
         [];
     }
@@ -984,6 +1729,7 @@ function recordGameVisit(
         id
       )
     ) {
+
       record.userIds.push(
         id
       );
@@ -992,9 +1738,18 @@ function recordGameVisit(
 
   markDirty();
 
+  /*
+   * Fetch Roblox description,
+   * icon and thumbnail in the
+   * background.
+   */
+
+  queueGameMetadataRefresh(
+    record
+  );
+
   return record;
 }
-
 
 // ============================================================
 // KNOWLEDGE NORMALIZATION
@@ -1006,8 +1761,10 @@ function normalizeLearningKnowledge(
 
   if (
     !body ||
-    typeof body !== 'object'
+    typeof body !==
+      'object'
   ) {
+
     throw new Error(
       'Invalid knowledge payload'
     );
@@ -1033,12 +1790,14 @@ function normalizeLearningKnowledge(
     );
 
   if (!topic) {
+
     throw new Error(
       'topic is required'
     );
   }
 
   if (!lesson) {
+
     throw new Error(
       'lesson is required'
     );
@@ -1054,7 +1813,9 @@ function normalizeLearningKnowledge(
       confidence
     )
   ) {
-    confidence = 0;
+
+    confidence =
+      0;
   }
 
   confidence =
@@ -1076,7 +1837,9 @@ function normalizeLearningKnowledge(
       evidenceCount
     )
   ) {
-    evidenceCount = 1;
+
+    evidenceCount =
+      1;
   }
 
   evidenceCount =
@@ -1115,9 +1878,12 @@ function normalizeLearningKnowledge(
    */
 
   const verified =
-    body.verified === true &&
-    confidence >= 0.85 &&
-    evidenceCount >= 2;
+    body.verified ===
+      true &&
+    confidence >=
+      0.85 &&
+    evidenceCount >=
+      2;
 
   const id =
     safeString(
@@ -1128,7 +1894,10 @@ function normalizeLearningKnowledge(
         '_' +
         Math.random()
           .toString(36)
-          .slice(2, 9)
+          .slice(
+            2,
+            9
+          )
       ),
       150
     );
@@ -1137,11 +1906,12 @@ function normalizeLearningKnowledge(
 
     id,
 
-        game:
+    game:
       body.game &&
       typeof body.game ===
-      'object'
+        'object'
         ? {
+
             name:
               safeString(
                 body.game.name,
@@ -1164,6 +1934,24 @@ function normalizeLearningKnowledge(
               safeString(
                 body.game.jobId,
                 100
+              ),
+
+            description:
+              safeString(
+                body.game.description,
+                10000
+              ),
+
+            iconUrl:
+              safeString(
+                body.game.iconUrl,
+                2000
+              ),
+
+            thumbnailUrl:
+              safeString(
+                body.game.thumbnailUrl,
+                2000
               )
           }
         : null,
@@ -1193,7 +1981,6 @@ function normalizeLearningKnowledge(
       now()
   };
 }
-
 
 // ============================================================
 // SUBMIT KNOWLEDGE
@@ -1326,7 +2113,10 @@ function submitLearningKnowledge(
       '_' +
       Math.random()
         .toString(36)
-        .slice(2, 8),
+        .slice(
+          2,
+          8
+        ),
 
     type:
       item.verified
@@ -1356,10 +2146,6 @@ function submitLearningKnowledge(
     createdAt:
       now()
   });
-
-  /*
-   * Keep event history bounded.
-   */
 
   if (
     db.learningEvents.length >
@@ -1414,7 +2200,6 @@ function submitLearningKnowledge(
   };
 }
 
-
 // ============================================================
 // SHARED KNOWLEDGE QUERY
 // ============================================================
@@ -1465,9 +2250,10 @@ function getSharedLearningKnowledge(
   list =
     list.filter(
       item =>
-        item.verified === true ||
+        item.verified ===
+          true ||
         item.visibility ===
-        'system'
+          'system'
     );
 
   if (query) {
@@ -1507,10 +2293,12 @@ function getSharedLearningKnowledge(
   list.sort(
     (a, b) =>
       Number(
-        b.updatedAt || 0
+        b.updatedAt ||
+        0
       ) -
       Number(
-        a.updatedAt || 0
+        a.updatedAt ||
+        0
       )
   );
 
@@ -1560,7 +2348,6 @@ function getSharedLearningKnowledge(
   );
 }
 
-
 // ============================================================
 // GAME LEARNING SCORE
 // ============================================================
@@ -1607,6 +2394,7 @@ function calculateGameLearningScore(
         .toLowerCase();
 
     if (topic) {
+
       topics.add(
         topic
       );
@@ -1627,7 +2415,6 @@ function calculateGameLearningScore(
     topics.size * 10
   );
 }
-
 
 // ============================================================
 // DASHBOARD GAME SUMMARY
@@ -1673,7 +2460,8 @@ function buildLearningGameSummary(
   ) {
 
     learningStatus =
-      learningScore >= 80
+      learningScore >=
+        80
         ? 'well-learned'
         : 'learning';
   }
@@ -1691,6 +2479,26 @@ function buildLearningGameSummary(
 
     universeId:
       game.universeId,
+
+    // ========================================================
+    // GAME DESCRIPTION + IMAGES
+    // ========================================================
+
+    description:
+      game.description ||
+      null,
+
+    iconUrl:
+      game.iconUrl ||
+      null,
+
+    thumbnailUrl:
+      game.thumbnailUrl ||
+      null,
+
+    metadataFetchedAt:
+      game.metadataFetchedAt ||
+      null,
 
     firstSeen:
       game.firstSeen,
@@ -1739,7 +2547,6 @@ function buildLearningGameSummary(
   };
 }
 
-
 // ============================================================
 // DASHBOARD GAMES
 // ============================================================
@@ -1766,7 +2573,6 @@ function getDashboardGames() {
         )
     );
 }
-
 
 // ============================================================
 // DASHBOARD LEARNING SUMMARY
@@ -1815,12 +2621,14 @@ function getDashboardLearningSummary() {
 
       brains:
         Object.keys(
-          db.brains || {}
+          db.brains ||
+          {}
         ).length,
 
       players:
         Object.keys(
-          db.players || {}
+          db.players ||
+          {}
         ).length,
 
       games:
@@ -1862,7 +2670,9 @@ function serveStatic(
 
   const ext =
     path
-      .extname(filePath)
+      .extname(
+        filePath
+      )
       .toLowerCase();
 
   const types = {
@@ -1897,12 +2707,20 @@ function serveStatic(
 
   fs.readFile(
     filePath,
-    (err, content) => {
+    (
+      err,
+      content
+    ) => {
 
       if (err) {
 
-        res.writeHead(404);
-        res.end('Not found');
+        res.writeHead(
+          404
+        );
+
+        res.end(
+          'Not found'
+        );
 
         return;
       }
@@ -1910,13 +2728,16 @@ function serveStatic(
       res.writeHead(
         200,
         {
+
           'Content-Type':
             types[ext] ||
             'application/octet-stream'
         }
       );
 
-      res.end(content);
+      res.end(
+        content
+      );
     }
   );
 }
@@ -1932,7 +2753,8 @@ function findHistoryValue(
 
   return list.find(
     item =>
-      item.value === value
+      item.value ===
+      value
   );
 }
 
@@ -1943,6 +2765,7 @@ function rememberHistory(
 ) {
 
   if (!value) {
+
     return false;
   }
 
@@ -1981,6 +2804,7 @@ function rememberAvatar(
 ) {
 
   if (!avatar) {
+
     return false;
   }
 
@@ -2000,6 +2824,7 @@ function rememberAvatar(
     !imageUrl &&
     !fingerprint
   ) {
+
     return false;
   }
 
@@ -2028,6 +2853,7 @@ function rememberAvatar(
       imageUrl &&
       !existing.imageUrl
     ) {
+
       existing.imageUrl =
         imageUrl;
     }
@@ -2038,10 +2864,12 @@ function rememberAvatar(
   player.avatarHistory.push({
 
     fingerprint:
-      fingerprint || null,
+      fingerprint ||
+      null,
 
     imageUrl:
-      imageUrl || null,
+      imageUrl ||
+      null,
 
     firstSeen:
       timestamp,
@@ -2058,14 +2886,21 @@ function rememberAvatar(
 // ============================================================
 
 const DEVICE_TYPES = [
+
   'mobile',
+
   'tablet',
+
   'computer',
+
   'console',
+
   'unknown'
 ];
 
-function normalizeDevice(value) {
+function normalizeDevice(
+  value
+) {
 
   const device =
     String(
@@ -2075,7 +2910,9 @@ function normalizeDevice(value) {
       .trim();
 
   if (
-    DEVICE_TYPES.includes(device)
+    DEVICE_TYPES.includes(
+      device
+    )
   ) {
 
     return device;
@@ -2090,25 +2927,37 @@ function ensureDevice(
 ) {
 
   device =
-    normalizeDevice(device);
+    normalizeDevice(
+      device
+    );
 
   if (
-    !player.devices[device]
+    !player.devices[
+      device
+    ]
   ) {
 
-    player.devices[device] = {
+    player.devices[
+      device
+    ] = {
 
-      sessions: 0,
+      sessions:
+        0,
 
-      playTimeMs: 0,
+      playTimeMs:
+        0,
 
-      firstSeen: null,
+      firstSeen:
+        null,
 
-      lastSeen: null
+      lastSeen:
+        null
     };
   }
 
-  return player.devices[device];
+  return player.devices[
+    device
+  ];
 }
 
 // ============================================================
@@ -2126,62 +2975,122 @@ function createPlayer(
 
     current: {
 
-      username: null,
+      username:
+        null,
 
-      displayName: null,
+      displayName:
+        null,
 
-      avatar: null
+      avatar:
+        null
     },
 
-    usernameHistory: [],
+    /*
+     * IMPORTANT:
+     *
+     * This is the PLAYER'S description.
+     * It is completely separate from
+     * game.description.
+     */
 
-    displayNameHistory: [],
+    description:
+      null,
 
-    avatarHistory: [],
+    usernameHistory:
+      [],
+
+    displayNameHistory:
+      [],
+
+    avatarHistory:
+      [],
 
     devices: {
 
       mobile: {
-        sessions: 0,
-        playTimeMs: 0,
-        firstSeen: null,
-        lastSeen: null
+
+        sessions:
+          0,
+
+        playTimeMs:
+          0,
+
+        firstSeen:
+          null,
+
+        lastSeen:
+          null
       },
 
       tablet: {
-        sessions: 0,
-        playTimeMs: 0,
-        firstSeen: null,
-        lastSeen: null
+
+        sessions:
+          0,
+
+        playTimeMs:
+          0,
+
+        firstSeen:
+          null,
+
+        lastSeen:
+          null
       },
 
       computer: {
-        sessions: 0,
-        playTimeMs: 0,
-        firstSeen: null,
-        lastSeen: null
+
+        sessions:
+          0,
+
+        playTimeMs:
+          0,
+
+        firstSeen:
+          null,
+
+        lastSeen:
+          null
       },
 
       console: {
-        sessions: 0,
-        playTimeMs: 0,
-        firstSeen: null,
-        lastSeen: null
+
+        sessions:
+          0,
+
+        playTimeMs:
+          0,
+
+        firstSeen:
+          null,
+
+        lastSeen:
+          null
       },
 
       unknown: {
-        sessions: 0,
-        playTimeMs: 0,
-        firstSeen: null,
-        lastSeen: null
+
+        sessions:
+          0,
+
+        playTimeMs:
+          0,
+
+        firstSeen:
+          null,
+
+        lastSeen:
+          null
       }
     },
 
-    countryHistory: [],
+    countryHistory:
+      [],
 
-    sessions: 0,
+    sessions:
+      0,
 
-    playTimeMs: 0,
+    playTimeMs:
+      0,
 
     firstSeen:
       timestamp,
@@ -2189,13 +3098,17 @@ function createPlayer(
     lastSeen:
       timestamp,
 
-    lastBrainId: null,
+    lastBrainId:
+      null,
 
-    lastGame: null,
+    lastGame:
+      null,
 
-    lastPlaceId: null,
+    lastPlaceId:
+      null,
 
-    lastJobId: null
+    lastJobId:
+      null
   };
 }
 
@@ -2205,7 +3118,9 @@ function getPlayer(
 ) {
 
   let player =
-    db.players[userId];
+    db.players[
+      userId
+    ];
 
   if (!player) {
 
@@ -2215,7 +3130,9 @@ function getPlayer(
         timestamp
       );
 
-    db.players[userId] =
+    db.players[
+      userId
+    ] =
       player;
 
     markDirty();
@@ -2246,40 +3163,77 @@ function migratePlayer(
     userId;
 
   if (!player.current) {
-    player.current = {};
+
+    player.current =
+      {};
   }
 
-  if (!Array.isArray(
-    player.usernameHistory
-  )) {
-    player.usernameHistory = [];
+  /*
+   * Migration for old players.
+   *
+   * Old players did not have
+   * a player description.
+   */
+
+  if (
+    player.description ===
+      undefined
+  ) {
+
+    player.description =
+      null;
   }
 
-  if (!Array.isArray(
-    player.displayNameHistory
-  )) {
-    player.displayNameHistory = [];
+  if (
+    !Array.isArray(
+      player.usernameHistory
+    )
+  ) {
+
+    player.usernameHistory =
+      [];
   }
 
-  if (!Array.isArray(
-    player.avatarHistory
-  )) {
-    player.avatarHistory = [];
+  if (
+    !Array.isArray(
+      player.displayNameHistory
+    )
+  ) {
+
+    player.displayNameHistory =
+      [];
   }
 
-  if (!Array.isArray(
-    player.countryHistory
-  )) {
-    player.countryHistory = [];
+  if (
+    !Array.isArray(
+      player.avatarHistory
+    )
+  ) {
+
+    player.avatarHistory =
+      [];
+  }
+
+  if (
+    !Array.isArray(
+      player.countryHistory
+    )
+  ) {
+
+    player.countryHistory =
+      [];
   }
 
   if (!player.devices) {
-    player.devices = {};
+
+    player.devices =
+      {};
   }
 
   for (
     const device of DEVICE_TYPES
   ) {
+
     ensureDevice(
       player,
       device
@@ -2290,22 +3244,28 @@ function migratePlayer(
     typeof player.sessions !==
     'number'
   ) {
-    player.sessions = 0;
+
+    player.sessions =
+      0;
   }
 
   if (
     typeof player.playTimeMs !==
     'number'
   ) {
-    player.playTimeMs = 0;
+
+    player.playTimeMs =
+      0;
   }
 
   if (!player.firstSeen) {
+
     player.firstSeen =
       timestamp;
   }
 
   if (!player.lastSeen) {
+
     player.lastSeen =
       timestamp;
   }
@@ -2323,6 +3283,7 @@ function rememberCountry(
 ) {
 
   if (!country) {
+
     return;
   }
 
@@ -2334,13 +3295,15 @@ function rememberCountry(
       .toUpperCase();
 
   if (!code) {
+
     return;
   }
 
   const existing =
     player.countryHistory.find(
       item =>
-        item.code === code
+        item.code ===
+        code
     );
 
   if (existing) {
@@ -2385,6 +3348,7 @@ function updatePlayerProfile(
     );
 
   if (!userId) {
+
     throw new Error(
       'Invalid userId'
     );
@@ -2410,6 +3374,25 @@ function updatePlayerProfile(
       body.displayName,
       100
     );
+
+  /*
+   * PLAYER DESCRIPTION
+   *
+   * This is intentionally NOT
+   * game.description.
+   */
+
+  if (
+    body.description !==
+      undefined
+  ) {
+
+    player.description =
+      safeString(
+        body.description,
+        5000
+      );
+  }
 
   const device =
     normalizeDevice(
@@ -2443,7 +3426,7 @@ function updatePlayerProfile(
   if (
     body.avatar &&
     typeof body.avatar ===
-    'object'
+      'object'
   ) {
 
     rememberAvatar(
@@ -2479,12 +3462,17 @@ function updatePlayerProfile(
     timestamp;
 
   player.lastBrainId =
-    brainId || player.lastBrainId;
+    brainId ||
+    player.lastBrainId;
+
+  // ==========================================================
+  // PLAYER LAST GAME
+  // ==========================================================
 
   if (
     body.game &&
     typeof body.game ===
-    'object'
+      'object'
   ) {
 
     player.lastGame =
@@ -2504,6 +3492,8 @@ function updatePlayerProfile(
         body.game.jobId,
         100
       );
+  }
+
   // ==========================================================
   // ASTRA BRAIN V6 — RECORD GAME DISCOVERY
   // ==========================================================
@@ -2511,7 +3501,7 @@ function updatePlayerProfile(
   if (
     body.game &&
     typeof body.game ===
-    'object'
+      'object'
   ) {
 
     recordGameVisit(
@@ -2527,7 +3517,10 @@ function updatePlayerProfile(
       device
     );
 
-  if (!deviceStats.firstSeen) {
+  if (
+    !deviceStats.firstSeen
+  ) {
+
     deviceStats.firstSeen =
       timestamp;
   }
@@ -2554,6 +3547,7 @@ function startPlayerSession(
     );
 
   if (!userId) {
+
     throw new Error(
       'Invalid userId'
     );
@@ -2591,9 +3585,13 @@ function startPlayerSession(
     markDirty();
 
     return {
+
       player,
+
       session,
-      created: false
+
+      created:
+        false
     };
   }
 
@@ -2634,8 +3632,9 @@ function startPlayerSession(
     game:
       body.game &&
       typeof body.game ===
-      'object'
+        'object'
         ? {
+
             name:
               safeString(
                 body.game.name,
@@ -2645,6 +3644,12 @@ function startPlayerSession(
             placeId:
               safeString(
                 body.game.placeId,
+                64
+              ),
+
+            universeId:
+              safeString(
+                body.game.universeId,
                 64
               ),
 
@@ -2659,7 +3664,8 @@ function startPlayerSession(
 
   db.playerSessions[
     sessionId
-  ] = session;
+  ] =
+    session;
 
   player.sessions++;
 
@@ -2677,9 +3683,13 @@ function startPlayerSession(
   markDirty();
 
   return {
+
     player,
+
     session,
-    created: true
+
+    created:
+      true
   };
 }
 
@@ -2698,6 +3708,7 @@ function heartbeatPlayerSession(
     );
 
   if (!sessionId) {
+
     throw new Error(
       'sessionId is required'
     );
@@ -2725,10 +3736,11 @@ function heartbeatPlayerSession(
   if (
     delta < 0 ||
     delta >
-    PLAYER_SESSION_TIMEOUT_MS
+      PLAYER_SESSION_TIMEOUT_MS
   ) {
 
-    delta = 0;
+    delta =
+      0;
   }
 
   session.playTimeMs +=
@@ -2769,7 +3781,10 @@ function heartbeatPlayerSession(
   markDirty();
 
   return {
-    found: true,
+
+    found:
+      true,
+
     session
   };
 }
@@ -2789,6 +3804,7 @@ function endPlayerSession(
     );
 
   if (!sessionId) {
+
     throw new Error(
       'sessionId is required'
     );
@@ -2809,8 +3825,13 @@ function endPlayerSession(
   if (!session.active) {
 
     return {
-      found: true,
-      alreadyEnded: true,
+
+      found:
+        true,
+
+      alreadyEnded:
+        true,
+
       session
     };
   }
@@ -2825,10 +3846,11 @@ function endPlayerSession(
   if (
     delta < 0 ||
     delta >
-    PLAYER_SESSION_TIMEOUT_MS
+      PLAYER_SESSION_TIMEOUT_MS
   ) {
 
-    delta = 0;
+    delta =
+      0;
   }
 
   session.playTimeMs +=
@@ -2872,7 +3894,10 @@ function endPlayerSession(
   markDirty();
 
   return {
-    found: true,
+
+    found:
+      true,
+
     session
   };
 }
@@ -2898,22 +3923,15 @@ function cleanPlayerSessions() {
     if (
       !session.active
     ) {
+
       continue;
     }
 
     if (
       timestamp -
-      session.lastSeen >
+        session.lastSeen >
       PLAYER_SESSION_TIMEOUT_MS
     ) {
-
-      let delta =
-        session.lastSeen -
-        session.startedAt;
-
-      if (delta < 0) {
-        delta = 0;
-      }
 
       const player =
         db.players[
@@ -2923,12 +3941,11 @@ function cleanPlayerSessions() {
       if (player) {
 
         /*
-         * Do not double count.
          * Heartbeats already accounted
          * for previous intervals.
          *
-         * The final stale interval is
-         * intentionally limited.
+         * Only account for the final
+         * stale interval.
          */
 
         const staleDelta =
@@ -2937,7 +3954,7 @@ function cleanPlayerSessions() {
             Math.max(
               0,
               timestamp -
-              session.lastSeen
+                session.lastSeen
             )
           );
 
@@ -2963,7 +3980,7 @@ function cleanPlayerSessions() {
           Math.max(
             0,
             timestamp -
-            session.lastSeen
+              session.lastSeen
           )
         );
 
@@ -3002,10 +4019,10 @@ function markOffline() {
 
     if (
       brain.status ===
-      'online'
+        'online'
       &&
       brain.lastSeen <
-      threshold
+        threshold
     ) {
 
       brain.status =
@@ -3017,6 +4034,7 @@ function markOffline() {
   }
 
   if (changed) {
+
     markDirty();
   }
 }
@@ -3068,10 +4086,14 @@ function registerBrain(
 
   const ipHash =
     hashIp(
-      getClientIp(req)
+      getClientIp(
+        req
+      )
     );
 
-  if (db.brains[id]) {
+  if (
+    db.brains[id]
+  ) {
 
     const brain =
       db.brains[id];
@@ -3079,7 +4101,9 @@ function registerBrain(
     brain.userId =
       userId;
 
-    if (body.displayName) {
+    if (
+      body.displayName
+    ) {
 
       brain.displayName =
         safeString(
@@ -3088,7 +4112,9 @@ function registerBrain(
         );
     }
 
-    if (body.originalName) {
+    if (
+      body.originalName
+    ) {
 
       brain.originalName =
         safeString(
@@ -3097,7 +4123,9 @@ function registerBrain(
         );
     }
 
-    if (body.brainVersion) {
+    if (
+      body.brainVersion
+    ) {
 
       brain.brainVersion =
         safeString(
@@ -3106,7 +4134,10 @@ function registerBrain(
         );
     }
 
-    if (skills.length) {
+    if (
+      skills.length
+    ) {
+
       brain.skills =
         skills;
     }
@@ -3183,8 +4214,13 @@ function registerBrain(
   markDirty();
 
   return {
-    success: true,
-    brainId: id,
+
+    success:
+      true,
+
+    brainId:
+      id,
+
     userId
   };
 }
@@ -3197,7 +4233,9 @@ function heartbeatBrain(
   body
 ) {
 
-  if (!body.brainId) {
+  if (
+    !body.brainId
+  ) {
 
     throw new Error(
       'brainId is required'
@@ -3222,11 +4260,13 @@ function heartbeatBrain(
 
   brain.lastSeen =
     typeof body.lastSeen ===
-    'number'
+      'number'
       ? body.lastSeen
       : now();
 
-  if (body.status) {
+  if (
+    body.status
+  ) {
 
     brain.status =
       safeString(
@@ -3235,7 +4275,9 @@ function heartbeatBrain(
       );
   }
 
-  if (body.brainVersion) {
+  if (
+    body.brainVersion
+  ) {
 
     brain.brainVersion =
       safeString(
@@ -3259,13 +4301,17 @@ function heartbeatBrain(
     body.userId ||
     body.username ||
     body.displayName ||
+    body.description !==
+      undefined ||
     body.device ||
-    body.avatar
+    body.avatar ||
+    body.game
   ) {
 
     updatePlayerProfile(
       {
         ...body,
+
         userId:
           body.userId ||
           brain.userId
@@ -3277,7 +4323,9 @@ function heartbeatBrain(
   markDirty();
 
   return {
-    found: true
+
+    found:
+      true
   };
 }
 
@@ -3290,10 +4338,12 @@ function buildPlayerSummary(
 ) {
 
   if (!player) {
+
     return null;
   }
 
-  const devices = {};
+  const devices =
+    {};
 
   for (
     const device of DEVICE_TYPES
@@ -3305,7 +4355,9 @@ function buildPlayerSummary(
         device
       );
 
-    devices[device] = {
+    devices[
+      device
+    ] = {
 
       sessions:
         d.sessions,
@@ -3325,6 +4377,16 @@ function buildPlayerSummary(
 
     userId:
       player.userId,
+
+    /*
+     * PLAYER DESCRIPTION
+     *
+     * This is NOT the game description.
+     */
+
+    description:
+      player.description ||
+      null,
 
     current:
       player.current,
@@ -3381,7 +4443,10 @@ async function handler(
   const url =
     new URL(
       req.url,
-      `http://${req.headers.host || 'localhost'}`
+      `http://${
+        req.headers.host ||
+        'localhost'
+      }`
     );
 
   const pathname =
@@ -3390,9 +4455,9 @@ async function handler(
   const method =
     req.method;
 
-  // ----------------------------------------------------------
+  // ==========================================================
   // CORS
-  // ----------------------------------------------------------
+  // ==========================================================
 
   if (
     method ===
@@ -3402,8 +4467,10 @@ async function handler(
     res.writeHead(
       204,
       {
+
         'Access-Control-Allow-Origin':
-          req.headers.origin || '*',
+          req.headers.origin ||
+          '*',
 
         'Access-Control-Allow-Methods':
           'GET,POST,OPTIONS',
@@ -3422,7 +4489,8 @@ async function handler(
   const corsHeaders = {
 
     'Access-Control-Allow-Origin':
-      req.headers.origin || '*',
+      req.headers.origin ||
+      '*',
 
     'Access-Control-Allow-Credentials':
       'true'
@@ -3436,10 +4504,10 @@ async function handler(
 
     if (
       pathname ===
-      '/health'
+        '/health'
       &&
       method ===
-      'GET'
+        'GET'
     ) {
 
       cleanPlayerSessions();
@@ -3448,6 +4516,7 @@ async function handler(
         res,
         200,
         {
+
           status:
             'ok',
 
@@ -3469,7 +4538,8 @@ async function handler(
               db.playerSessions
             )
               .filter(
-                s => s.active
+                s =>
+                  s.active
               )
               .length
         },
@@ -3483,15 +4553,17 @@ async function handler(
 
     if (
       pathname ===
-      '/api/auth/login'
+        '/api/auth/login'
       &&
       method ===
-      'POST'
+        'POST'
     ) {
 
       const ipHash =
         hashIp(
-          getClientIp(req)
+          getClientIp(
+            req
+          )
         );
 
       const rate =
@@ -3505,6 +4577,7 @@ async function handler(
           res,
           429,
           {
+
             error:
               'Too many failed attempts. Try again later.',
 
@@ -3516,22 +4589,27 @@ async function handler(
       }
 
       const body =
-        await readBody(req);
+        await readBody(
+          req
+        );
 
       if (
         typeof body.password !==
-        'string'
+          'string'
         ||
         body.password !==
-        DASHBOARD_PASSWORD
+          DASHBOARD_PASSWORD
       ) {
 
-        failLogin(ipHash);
+        failLogin(
+          ipHash
+        );
 
         return json(
           res,
           401,
           {
+
             error:
               'Incorrect password'
           },
@@ -3539,13 +4617,17 @@ async function handler(
         );
       }
 
-      clearFail(ipHash);
+      clearFail(
+        ipHash
+      );
 
       const sid =
         createSession();
 
       const cookie =
-        `session=${sid}; HttpOnly; Path=/; Max-Age=${SESSION_MAX_AGE_MS / 1000}; SameSite=Lax` +
+        `session=${sid}; HttpOnly; Path=/; Max-Age=${
+          SESSION_MAX_AGE_MS / 1000
+        }; SameSite=Lax` +
         (
           NODE_ENV ===
           'production'
@@ -3557,11 +4639,14 @@ async function handler(
         res,
         200,
         {
+
           success:
             true
         },
         {
+
           ...corsHeaders,
+
           'Set-Cookie':
             cookie
         }
@@ -3574,10 +4659,10 @@ async function handler(
 
     if (
       pathname ===
-      '/api/auth/logout'
+        '/api/auth/logout'
       &&
       method ===
-      'POST'
+        'POST'
     ) {
 
       const cookies =
@@ -3593,10 +4678,12 @@ async function handler(
         res,
         200,
         {
+
           success:
             true
         },
         {
+
           ...corsHeaders,
 
           'Set-Cookie':
@@ -3611,16 +4698,17 @@ async function handler(
 
     if (
       pathname ===
-      '/api/auth/check'
+        '/api/auth/check'
       &&
       method ===
-      'GET'
+        'GET'
     ) {
 
       return json(
         res,
         200,
         {
+
           authenticated:
             isAuth(req)
         },
@@ -3634,18 +4722,23 @@ async function handler(
 
     if (
       pathname ===
-      '/api/brains/register'
+        '/api/brains/register'
       &&
       method ===
-      'POST'
+        'POST'
     ) {
 
-      if (!verifyBrain(req)) {
+      if (
+        !verifyBrain(
+          req
+        )
+      ) {
 
         return json(
           res,
           401,
           {
+
             error:
               'Invalid or missing Brain API secret'
           },
@@ -3654,7 +4747,9 @@ async function handler(
       }
 
       const body =
-        await readBody(req);
+        await readBody(
+          req
+        );
 
       try {
 
@@ -3664,7 +4759,9 @@ async function handler(
             req
           );
 
-        saveDB(true);
+        saveDB(
+          true
+        );
 
         return json(
           res,
@@ -3679,6 +4776,7 @@ async function handler(
           res,
           400,
           {
+
             error:
               e.message
           },
@@ -3693,18 +4791,23 @@ async function handler(
 
     if (
       pathname ===
-      '/api/brains/heartbeat'
+        '/api/brains/heartbeat'
       &&
       method ===
-      'POST'
+        'POST'
     ) {
 
-      if (!verifyBrain(req)) {
+      if (
+        !verifyBrain(
+          req
+        )
+      ) {
 
         return json(
           res,
           401,
           {
+
             error:
               'Invalid or missing Brain API secret'
           },
@@ -3713,7 +4816,9 @@ async function handler(
       }
 
       const body =
-        await readBody(req);
+        await readBody(
+          req
+        );
 
       try {
 
@@ -3722,12 +4827,15 @@ async function handler(
             body
           );
 
-        if (!result.found) {
+        if (
+          !result.found
+        ) {
 
           return json(
             res,
             404,
             {
+
               error:
                 'Brain not found. Register first.'
             },
@@ -3735,12 +4843,15 @@ async function handler(
           );
         }
 
-        saveDB(true);
+        saveDB(
+          true
+        );
 
         return json(
           res,
           200,
           {
+
             success:
               true
           },
@@ -3753,6 +4864,7 @@ async function handler(
           res,
           400,
           {
+
             error:
               e.message
           },
@@ -3767,18 +4879,23 @@ async function handler(
 
     if (
       pathname ===
-      '/api/player/profile'
+        '/api/player/profile'
       &&
       method ===
-      'POST'
+        'POST'
     ) {
 
-      if (!verifyBrain(req)) {
+      if (
+        !verifyBrain(
+          req
+        )
+      ) {
 
         return json(
           res,
           401,
           {
+
             error:
               'Invalid or missing Brain API secret'
           },
@@ -3787,7 +4904,9 @@ async function handler(
       }
 
       const body =
-        await readBody(req);
+        await readBody(
+          req
+        );
 
       try {
 
@@ -3797,12 +4916,15 @@ async function handler(
             body.brainId
           );
 
-        saveDB(true);
+        saveDB(
+          true
+        );
 
         return json(
           res,
           200,
           {
+
             success:
               true,
 
@@ -3820,6 +4942,7 @@ async function handler(
           res,
           400,
           {
+
             error:
               e.message
           },
@@ -3834,18 +4957,23 @@ async function handler(
 
     if (
       pathname ===
-      '/api/player/session/start'
+        '/api/player/session/start'
       &&
       method ===
-      'POST'
+        'POST'
     ) {
 
-      if (!verifyBrain(req)) {
+      if (
+        !verifyBrain(
+          req
+        )
+      ) {
 
         return json(
           res,
           401,
           {
+
             error:
               'Invalid or missing Brain API secret'
           },
@@ -3854,7 +4982,9 @@ async function handler(
       }
 
       const body =
-        await readBody(req);
+        await readBody(
+          req
+        );
 
       try {
 
@@ -3863,12 +4993,15 @@ async function handler(
             body
           );
 
-        saveDB(true);
+        saveDB(
+          true
+        );
 
         return json(
           res,
           200,
           {
+
             success:
               true,
 
@@ -3892,6 +5025,7 @@ async function handler(
           res,
           400,
           {
+
             error:
               e.message
           },
@@ -3906,18 +5040,23 @@ async function handler(
 
     if (
       pathname ===
-      '/api/player/session/heartbeat'
+        '/api/player/session/heartbeat'
       &&
       method ===
-      'POST'
+        'POST'
     ) {
 
-      if (!verifyBrain(req)) {
+      if (
+        !verifyBrain(
+          req
+        )
+      ) {
 
         return json(
           res,
           401,
           {
+
             error:
               'Invalid or missing Brain API secret'
           },
@@ -3926,7 +5065,9 @@ async function handler(
       }
 
       const body =
-        await readBody(req);
+        await readBody(
+          req
+        );
 
       try {
 
@@ -3935,12 +5076,15 @@ async function handler(
             body
           );
 
-        saveDB(true);
+        saveDB(
+          true
+        );
 
         return json(
           res,
           200,
           {
+
             success:
               true,
 
@@ -3956,6 +5100,7 @@ async function handler(
           res,
           400,
           {
+
             error:
               e.message
           },
@@ -3970,18 +5115,23 @@ async function handler(
 
     if (
       pathname ===
-      '/api/player/session/end'
+        '/api/player/session/end'
       &&
       method ===
-      'POST'
+        'POST'
     ) {
 
-      if (!verifyBrain(req)) {
+      if (
+        !verifyBrain(
+          req
+        )
+      ) {
 
         return json(
           res,
           401,
           {
+
             error:
               'Invalid or missing Brain API secret'
           },
@@ -3990,7 +5140,9 @@ async function handler(
       }
 
       const body =
-        await readBody(req);
+        await readBody(
+          req
+        );
 
       try {
 
@@ -3999,12 +5151,15 @@ async function handler(
             body
           );
 
-        saveDB(true);
+        saveDB(
+          true
+        );
 
         return json(
           res,
           200,
           {
+
             success:
               true,
 
@@ -4012,7 +5167,8 @@ async function handler(
               result.found,
 
             session:
-              result.session || null
+              result.session ||
+              null
           },
           corsHeaders
         );
@@ -4023,6 +5179,7 @@ async function handler(
           res,
           400,
           {
+
             error:
               e.message
           },
@@ -4037,20 +5194,23 @@ async function handler(
 
     if (
       pathname ===
-      '/api/brain/learning/submit'
+        '/api/brain/learning/submit'
       &&
       method ===
-      'POST'
+        'POST'
     ) {
 
       if (
-        !verifyBrain(req)
+        !verifyBrain(
+          req
+        )
       ) {
 
         return json(
           res,
           401,
           {
+
             error:
               'Invalid or missing Brain API secret'
           },
@@ -4059,7 +5219,9 @@ async function handler(
       }
 
       const body =
-        await readBody(req);
+        await readBody(
+          req
+        );
 
       try {
 
@@ -4068,7 +5230,9 @@ async function handler(
             body
           );
 
-        saveDB(true);
+        saveDB(
+          true
+        );
 
         return json(
           res,
@@ -4083,6 +5247,7 @@ async function handler(
           res,
           400,
           {
+
             error:
               e.message
           },
@@ -4091,27 +5256,29 @@ async function handler(
       }
     }
 
-
     // ========================================================
     // ASTRA BRAIN V6: LEARNING RECALL
     // ========================================================
 
     if (
       pathname ===
-      '/api/brain/learning/recall'
+        '/api/brain/learning/recall'
       &&
       method ===
-      'POST'
+        'POST'
     ) {
 
       if (
-        !verifyBrain(req)
+        !verifyBrain(
+          req
+        )
       ) {
 
         return json(
           res,
           401,
           {
+
             error:
               'Invalid or missing Brain API secret'
           },
@@ -4120,7 +5287,9 @@ async function handler(
       }
 
       const body =
-        await readBody(req);
+        await readBody(
+          req
+        );
 
       const query =
         body.query ||
@@ -4128,12 +5297,17 @@ async function handler(
         body.game?.name ||
         '';
 
-      const gameKey =
+      const normalizedGame =
         body.game
+          ? normalizeLearningGame(
+              body.game
+            )
+          : null;
+
+      const gameKey =
+        normalizedGame
           ? getLearningGameKey(
-              normalizeLearningGame(
-                body.game
-              )
+              normalizedGame
             )
           : '';
 
@@ -4141,12 +5315,14 @@ async function handler(
         res,
         200,
         {
+
           success:
             true,
 
           knowledge:
             getSharedLearningKnowledge(
               {
+
                 q:
                   query,
 
@@ -4159,17 +5335,16 @@ async function handler(
       );
     }
 
-
     // ========================================================
     // DASHBOARD: COLLECTIVE KNOWLEDGE
     // ========================================================
 
     if (
       pathname ===
-      '/api/dashboard/knowledge'
+        '/api/dashboard/knowledge'
       &&
       method ===
-      'GET'
+        'GET'
     ) {
 
       if (
@@ -4180,6 +5355,7 @@ async function handler(
           res,
           401,
           {
+
             error:
               'Unauthorized'
           },
@@ -4190,23 +5366,27 @@ async function handler(
       const query =
         url.searchParams.get(
           'q'
-        ) || '';
+        ) ||
+        '';
 
       const gameKey =
         url.searchParams.get(
           'gameKey'
-        ) || '';
+        ) ||
+        '';
 
       return json(
         res,
         200,
         {
+
           success:
             true,
 
           knowledge:
             getSharedLearningKnowledge(
               {
+
                 q:
                   query,
 
@@ -4219,17 +5399,16 @@ async function handler(
       );
     }
 
-
     // ========================================================
     // DASHBOARD: DISCOVERED GAMES
     // ========================================================
 
     if (
       pathname ===
-      '/api/dashboard/games'
+        '/api/dashboard/games'
       &&
       method ===
-      'GET'
+        'GET'
     ) {
 
       if (
@@ -4240,6 +5419,7 @@ async function handler(
           res,
           401,
           {
+
             error:
               'Unauthorized'
           },
@@ -4251,6 +5431,7 @@ async function handler(
         res,
         200,
         {
+
           success:
             true,
 
@@ -4261,17 +5442,16 @@ async function handler(
       );
     }
 
-
     // ========================================================
     // DASHBOARD: COLLECTIVE LEARNING
     // ========================================================
 
     if (
       pathname ===
-      '/api/dashboard/learning'
+        '/api/dashboard/learning'
       &&
       method ===
-      'GET'
+        'GET'
     ) {
 
       if (
@@ -4282,6 +5462,7 @@ async function handler(
           res,
           401,
           {
+
             error:
               'Unauthorized'
           },
@@ -4293,6 +5474,7 @@ async function handler(
         res,
         200,
         {
+
           success:
             true,
 
@@ -4308,18 +5490,21 @@ async function handler(
 
     if (
       pathname ===
-      '/api/brains'
+        '/api/brains'
       &&
       method ===
-      'GET'
+        'GET'
     ) {
 
-      if (!isAuth(req)) {
+      if (
+        !isAuth(req)
+      ) {
 
         return json(
           res,
           401,
           {
+
             error:
               'Unauthorized'
           },
@@ -4335,7 +5520,8 @@ async function handler(
         (
           url.searchParams.get(
             'q'
-          ) || ''
+          ) ||
+          ''
         )
           .toLowerCase()
           .trim();
@@ -4344,7 +5530,8 @@ async function handler(
         (
           url.searchParams.get(
             'status'
-          ) || ''
+          ) ||
+          ''
         )
           .toLowerCase();
 
@@ -4363,7 +5550,9 @@ async function handler(
                 ''
               )
                 .toLowerCase()
-                .includes(q)
+                .includes(
+                  q
+                )
 
               ||
 
@@ -4372,7 +5561,9 @@ async function handler(
                 ''
               )
                 .toLowerCase()
-                .includes(q)
+                .includes(
+                  q
+                )
 
               ||
 
@@ -4381,7 +5572,9 @@ async function handler(
                 ''
               )
                 .toLowerCase()
-                .includes(q)
+                .includes(
+                  q
+                )
 
               ||
 
@@ -4390,7 +5583,9 @@ async function handler(
                 ''
               )
                 .toLowerCase()
-                .includes(q)
+                .includes(
+                  q
+                )
           );
       }
 
@@ -4413,10 +5608,12 @@ async function handler(
       list.sort(
         (a, b) =>
           (
-            b.lastSeen || 0
+            b.lastSeen ||
+            0
           ) -
           (
-            a.lastSeen || 0
+            a.lastSeen ||
+            0
           )
       );
 
@@ -4447,7 +5644,8 @@ async function handler(
                 r.brainVersion,
 
               skills:
-                r.skills || [],
+                r.skills ||
+                [],
 
               status:
                 r.status,
@@ -4461,12 +5659,19 @@ async function handler(
               playerSummary:
                 player
                   ? {
+
                       username:
-                        player.current?.username ||
+                        player.current
+                          ?.username ||
                         null,
 
                       displayName:
-                        player.current?.displayName ||
+                        player.current
+                          ?.displayName ||
+                        null,
+
+                      description:
+                        player.description ||
                         null,
 
                       sessions:
@@ -4490,6 +5695,7 @@ async function handler(
         res,
         200,
         {
+
           total:
             brains.length,
 
@@ -4528,15 +5734,18 @@ async function handler(
       )
       &&
       method ===
-      'GET'
+        'GET'
     ) {
 
-      if (!isAuth(req)) {
+      if (
+        !isAuth(req)
+      ) {
 
         return json(
           res,
           401,
           {
+
             error:
               'Unauthorized'
           },
@@ -4564,6 +5773,7 @@ async function handler(
           res,
           404,
           {
+
             error:
               'Player not found'
           },
@@ -4575,6 +5785,7 @@ async function handler(
         res,
         200,
         {
+
           success:
             true,
 
@@ -4590,7 +5801,7 @@ async function handler(
               .filter(
                 session =>
                   session.userId ===
-                  userId &&
+                    userId &&
                   session.active
               )
         },
@@ -4608,15 +5819,18 @@ async function handler(
       )
       &&
       method ===
-      'GET'
+        'GET'
     ) {
 
-      if (!isAuth(req)) {
+      if (
+        !isAuth(req)
+      ) {
 
         return json(
           res,
           401,
           {
+
             error:
               'Unauthorized'
           },
@@ -4636,7 +5850,9 @@ async function handler(
         );
 
       const brain =
-        db.brains[id];
+        db.brains[
+          id
+        ];
 
       if (!brain) {
 
@@ -4644,6 +5860,7 @@ async function handler(
           res,
           404,
           {
+
             error:
               'Brain not found'
           },
@@ -4660,6 +5877,7 @@ async function handler(
         res,
         200,
         {
+
           brainId:
             brain.brainId,
 
@@ -4676,7 +5894,8 @@ async function handler(
             brain.brainVersion,
 
           skills:
-            brain.skills || [],
+            brain.skills ||
+            [],
 
           status:
             brain.status,
@@ -4709,7 +5928,8 @@ async function handler(
       );
 
     const requested =
-      pathname === '/'
+      pathname ===
+        '/'
         ? 'index.html'
         : pathname;
 
@@ -4717,7 +5937,7 @@ async function handler(
       path.resolve(
         publicDir,
         '.' +
-        requested
+          requested
       );
 
     const relative =
@@ -4727,11 +5947,18 @@ async function handler(
       );
 
     if (
-      relative.startsWith('..') ||
-      path.isAbsolute(relative)
+      relative.startsWith(
+        '..'
+      ) ||
+      path.isAbsolute(
+        relative
+      )
     ) {
 
-      res.writeHead(403);
+      res.writeHead(
+        403
+      );
+
       return res.end(
         'Forbidden'
       );
@@ -4776,7 +6003,10 @@ async function handler(
       );
     }
 
-    res.writeHead(404);
+    res.writeHead(
+      404
+    );
+
     res.end(
       'Not found'
     );
@@ -4791,6 +6021,7 @@ async function handler(
       res,
       500,
       {
+
         error:
           'Internal server error'
       },
@@ -4822,11 +6053,19 @@ server.listen(
     );
 
     console.log(
-      `Players: ${Object.keys(db.players).length}`
+      `Players: ${
+        Object.keys(
+          db.players
+        ).length
+      }`
     );
 
     console.log(
-      `Brains: ${Object.keys(db.brains).length}`
+      `Brains: ${
+        Object.keys(
+          db.brains
+        ).length
+      }`
     );
   }
 );
@@ -4842,7 +6081,9 @@ setInterval(
 
     cleanPlayerSessions();
 
-    saveDB(false);
+    saveDB(
+      false
+    );
 
   },
   30000
@@ -4855,9 +6096,16 @@ setInterval(
 function shutdown() {
 
   try {
-    saveDB(true);
+
+    saveDB(
+      true
+    );
+
   } finally {
-    process.exit(0);
+
+    process.exit(
+      0
+    );
   }
 }
 

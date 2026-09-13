@@ -1,0 +1,1 @@
+module.exports={id:'research',name:'research',description:'Research with real sources when a web provider is available.',triggers:['research','nghiên cứu','tìm hiểu','search'],priority:65,enabled:true,scope:'system',aiGuidance:'Never fabricate search results. If no real search provider is available, say so.'};

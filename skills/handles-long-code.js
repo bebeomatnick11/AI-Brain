@@ -1,0 +1,1 @@
+module.exports={id:'handles-long-code',name:'handles-long-code',description:'Handle long code requests without silently dropping important sections.',triggers:['full code','full script','long code','toàn bộ code'],priority:90,enabled:true,scope:'system',aiGuidance:'Do not replace a long existing system with a tiny rewrite. Split output into logical complete files if necessary.'};

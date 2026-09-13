@@ -1,0 +1,1 @@
+module.exports={id:'smart-work',name:'smart-work',description:'Break complex requests into clear steps and verify the result.',triggers:['smart work','làm việc thông minh','chia nhỏ'],priority:70,enabled:true,scope:'system',aiGuidance:'For complex tasks: understand requirements, plan, execute only supported actions, verify, then report clearly.'};

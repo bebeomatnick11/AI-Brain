@@ -1,0 +1,1 @@
+module.exports={name:'code',description:'Code reasoning metadata tool; it does not execute arbitrary user code.',async execute(args){const code=String(args.code||'');return {accepted:true,executed:false,length:code.length,languages:Array.isArray(args.languages)?args.languages.slice(0,10):[]};}};

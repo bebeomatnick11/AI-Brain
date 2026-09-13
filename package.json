@@ -1,19 +1,12 @@
 {
-  "name": "astra-brain-v5-no-api-key",
-  "version": "5.0.1",
-  "description": "Astra Brain V5 - Public AI Brain Registry without API keys",
+  "name": "astra-brain",
+  "version": "5.1.0",
+  "description": "Astra Brain - Roblox AI Agent, Brain Registry and Player Intelligence",
   "private": true,
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js"
-  },
-  "dependencies": {
-    "cookie-parser": "^1.4.7",
-    "cors": "^2.8.5",
-    "express": "^4.21.2",
-    "express-rate-limit": "^7.5.0",
-    "helmet": "^8.0.0"
   },
   "engines": {
     "node": ">=18"

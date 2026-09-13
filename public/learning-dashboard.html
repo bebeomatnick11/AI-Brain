@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+<meta charset="UTF-8">
+
+<meta
+  name="viewport"
+  content="width=device-width, initial-scale=1.0"
+>
+
+<title>Astra Brain — Collective Intelligence</title>
+
+<style>
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+
+  font-family:
+    Inter,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+
+  background:
+    #070b14;
+
+  color:
+    #f4f7ff;
+}
+
+header {
+  padding: 22px;
+
+  border-bottom:
+    1px solid #20283a;
+
+  background:
+    #0b101c;
+
+  position:
+    sticky;
+
+  top: 0;
+
+  z-index: 20;
+}
+
+.header-inner {
+  max-width:
+    1250px;
+
+  margin:
+    auto;
+
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    space-between;
+
+  gap:
+    16px;
+}
+
+.logo {
+  font-size:
+    22px;
+
+  font-weight:
+    800;
+
+  letter-spacing:
+    .4px;
+}
+
+.logo span {
+  opacity:
+    .55;
+
+  font-weight:
+    500;
+}
+
+button {
+  border:
+    1px solid #2b3852;
+
+  background:
+    #11192a;
+
+  color:
+    white;
+
+  padding:
+    10px 14px;
+
+  border-radius:
+    10px;
+
+  cursor:
+    pointer;
+}
+
+button:hover {
+  background:
+    #18233a;
+}
+
+main {
+  max-width:
+    1250px;
+
+  margin:
+    auto;
+
+  padding:
+    24px;
+}
+
+.stats {
+  display:
+    grid;
+
+  grid-template-columns:
+    repeat(
+      auto-fit,
+      minmax(
+        160px,
+        1fr
+      )
+    );
+
+  gap:
+    14px;
+
+  margin-bottom:
+    28px;
+}
+
+.stat {
+  background:
+    #0d1422;
+
+  border:
+    1px solid #202b40;
+
+  border-radius:
+    15px;
+
+  padding:
+    18px;
+}
+
+.stat-label {
+  color:
+    #8290a8;
+
+  font-size:
+    13px;
+
+  margin-bottom:
+    8px;
+}
+
+.stat-value {
+  font-size:
+    27px;
+
+  font-weight:
+    800;
+}
+
+.section {
+  margin-top:
+    28px;
+}
+
+.section-title {
+  font-size:
+    19px;
+
+  font-weight:
+    800;
+
+  margin-bottom:
+    12px;
+}
+
+.grid {
+  display:
+    grid;
+
+  grid-template-columns:
+    repeat(
+      auto-fit,
+      minmax(
+        280px,
+        1fr
+      )
+    );
+
+  gap:
+    14px;
+}
+
+.card {
+  background:
+    #0d1422;
+
+  border:
+    1px solid #202b40;
+
+  border-radius:
+    15px;
+
+  padding:
+    17px;
+}
+
+.game-name {
+  font-size:
+    18px;
+
+  font-weight:
+    800;
+
+  margin-bottom:
+    12px;
+}
+
+.meta {
+  color:
+    #9aa8bf;
+
+  font-size:
+    13px;
+
+  line-height:
+    1.8;
+}
+
+.progress {
+  height:
+    8px;
+
+  background:
+    #20283a;
+
+  border-radius:
+    999px;
+
+  overflow:
+    hidden;
+
+  margin:
+    12px 0 7px;
+}
+
+.progress-inner {
+  height:
+    100%;
+
+  background:
+    #6ea8ff;
+
+  border-radius:
+    inherit;
+}
+
+.status {
+  display:
+    inline-block;
+
+  margin-top:
+    8px;
+
+  padding:
+    5px 9px;
+
+  border-radius:
+    999px;
+
+  background:
+    #172338;
+
+  color:
+    #a9c8ff;
+
+  font-size:
+    12px;
+
+  font-weight:
+    700;
+}
+
+.knowledge {
+  line-height:
+    1.55;
+}
+
+.knowledge-topic {
+  font-weight:
+    800;
+
+  margin-bottom:
+    7px;
+}
+
+.lesson {
+  color:
+    #bdc7d8;
+
+  font-size:
+    14px;
+}
+
+.knowledge-meta {
+  color:
+    #7f8da5;
+
+  font-size:
+    12px;
+
+  margin-top:
+    10px;
+}
+
+.verified {
+  color:
+    #7de2a8;
+
+  font-weight:
+    700;
+}
+
+.empty {
+  padding:
+    30px;
+
+  border:
+    1px dashed #2a3448;
+
+  border-radius:
+    14px;
+
+  text-align:
+    center;
+
+  color:
+    #748199;
+}
+
+.error {
+  background:
+    #35151a;
+
+  border:
+    1px solid #64252e;
+
+  color:
+    #ff9fa9;
+
+  padding:
+    15px;
+
+  border-radius:
+    12px;
+
+  margin-bottom:
+    20px;
+
+  display:
+    none;
+}
+
+@media (
+  max-width: 600px
+) {
+
+  main {
+    padding:
+      15px;
+  }
+
+  .header-inner {
+    align-items:
+      flex-start;
+
+    flex-direction:
+      column;
+  }
+
+  .stat-value {
+    font-size:
+      23px;
+  }
+}
+
+</style>
+
+</head>
+
+<body>
+
+<header>
+
+  <div class="header-inner">
+
+    <div class="logo">
+      ASTRA BRAIN
+      <span>
+        / Collective Intelligence
+      </span>
+    </div>
+
+    <button
+      id="refresh"
+    >
+      Refresh
+    </button>
+
+  </div>
+
+</header>
+
+<main>
+
+  <div
+    id="error"
+    class="error"
+  ></div>
+
+  <section class="stats">
+
+    <div class="stat">
+      <div class="stat-label">
+        Brains
+      </div>
+
+      <div
+        class="stat-value"
+        id="brains"
+      >
+        —
+      </div>
+    </div>
+
+    <div class="stat">
+      <div class="stat-label">
+        Players
+      </div>
+
+      <div
+        class="stat-value"
+        id="players"
+      >
+        —
+      </div>
+    </div>
+
+    <div class="stat">
+      <div class="stat-label">
+        Games
+      </div>
+
+      <div
+        class="stat-value"
+        id="games"
+      >
+        —
+      </div>
+    </div>
+
+    <div class="stat">
+      <div class="stat-label">
+        Verified Knowledge
+      </div>
+
+      <div
+        class="stat-value"
+        id="knowledge"
+      >
+        —
+      </div>
+    </div>
+
+    <div class="stat">
+      <div class="stat-label">
+        Candidate Knowledge
+      </div>
+
+      <div
+        class="stat-value"
+        id="candidate"
+      >
+        —
+      </div>
+    </div>
+
+  </section>
+
+
+  <section class="section">
+
+    <div class="section-title">
+      🎮 Games Discovered
+    </div>
+
+    <div
+      id="game-list"
+      class="grid"
+    ></div>
+
+  </section>
+
+
+  <section class="section">
+
+    <div class="section-title">
+      🧠 Verified Knowledge Learned
+    </div>
+
+    <div
+      id="knowledge-list"
+      class="grid"
+    ></div>
+
+  </section>
+
+</main>
+
+
+<script>
+
+const gameList =
+  document.getElementById(
+    'game-list'
+  );
+
+const knowledgeList =
+  document.getElementById(
+    'knowledge-list'
+  );
+
+const errorBox =
+  document.getElementById(
+    'error'
+  );
+
+
+function escapeHtml(
+  value
+) {
+
+  return String(
+    value ?? ''
+  )
+    .replace(
+      /&/g,
+      '&amp;'
+    )
+    .replace(
+      /</g,
+      '&lt;'
+    )
+    .replace(
+      />/g,
+      '&gt;'
+    )
+    .replace(
+      /"/g,
+      '&quot;'
+    )
+    .replace(
+      /'/g,
+      '&#039;'
+    );
+}
+
+
+function formatDate(
+  value
+) {
+
+  if (!value) {
+    return 'Unknown';
+  }
+
+  try {
+
+    return new Date(
+      value
+    ).toLocaleString();
+
+  } catch {
+
+    return 'Unknown';
+  }
+}
+
+
+function formatPercent(
+  value
+) {
+
+  const number =
+    Number(
+      value || 0
+    );
+
+  return Math.max(
+    0,
+    Math.min(
+      100,
+      Math.round(
+        number
+      )
+    )
+  );
+}
+
+
+function renderGames(
+  games
+) {
+
+  if (
+    !Array.isArray(
+      games
+    ) ||
+    games.length === 0
+  ) {
+
+    gameList.innerHTML =
+      `
+        <div class="empty">
+          No games discovered yet.
+        </div>
+      `;
+
+    return;
+  }
+
+  gameList.innerHTML =
+    games
+      .map(
+        game => {
+
+          const score =
+            formatPercent(
+              game.learningScore
+            );
+
+          return `
+            <div class="card">
+
+              <div class="game-name">
+                🎮
+                ${escapeHtml(
+                  game.name
+                )}
+              </div>
+
+              <div class="meta">
+
+                Brains played:
+                <b>
+                  ${Number(
+                    game.brainCount || 0
+                  )}
+                </b>
+                <br>
+
+                Players:
+                <b>
+                  ${Number(
+                    game.playerCount || 0
+                  )}
+                </b>
+                <br>
+
+                Visits:
+                <b>
+                  ${Number(
+                    game.totalVisits || 0
+                  )}
+                </b>
+                <br>
+
+                Observations:
+                <b>
+                  ${Number(
+                    game.observations || 0
+                  )}
+                </b>
+                <br>
+
+                Verified lessons:
+                <b>
+                  ${Number(
+                    game.verifiedKnowledgeCount ||
+                    0
+                  )}
+                </b>
+
+              </div>
+
+              <div class="progress">
+
+                <div
+                  class="progress-inner"
+                  style="
+                    width:${score}%;
+                  "
+                ></div>
+
+              </div>
+
+              <div class="meta">
+                Learning score:
+                <b>
+                  ${score}%
+                </b>
+              </div>
+
+              <div class="status">
+                ${escapeHtml(
+                  game.learningStatus
+                )}
+              </div>
+
+              <div class="meta">
+                Last seen:
+                ${escapeHtml(
+                  formatDate(
+                    game.lastSeen
+                  )
+                )}
+              </div>
+
+            </div>
+          `;
+        }
+      )
+      .join('');
+}
+
+
+function renderKnowledge(
+  knowledge
+) {
+
+  if (
+    !Array.isArray(
+      knowledge
+    ) ||
+    knowledge.length === 0
+  ) {
+
+    knowledgeList.innerHTML =
+      `
+        <div class="empty">
+          No verified collective knowledge yet.
+        </div>
+      `;
+
+    return;
+  }
+
+  knowledgeList.innerHTML =
+    knowledge
+      .map(
+        item => {
+
+          const confidence =
+            Math.round(
+              Number(
+                item.confidence ||
+                0
+              ) *
+              100
+            );
+
+          return `
+            <div class="card knowledge">
+
+              <div class="knowledge-topic">
+
+                🧠
+                ${escapeHtml(
+                  item.topic
+                )}
+
+              </div>
+
+              <div class="lesson">
+
+                ${escapeHtml(
+                  item.lesson
+                )}
+
+              </div>
+
+              <div class="knowledge-meta">
+
+                Game:
+                <b>
+                  ${escapeHtml(
+                    item.game?.name ||
+                    'General'
+                  )}
+                </b>
+
+                <br>
+
+                Confidence:
+                <b>
+                  ${confidence}%
+                </b>
+
+                <br>
+
+                Evidence:
+                <b>
+                  ${Number(
+                    item.evidenceCount ||
+                    0
+                  )}
+                </b>
+
+                <br>
+
+                <span class="verified">
+                  ✓ VERIFIED
+                </span>
+
+              </div>
+
+            </div>
+          `;
+        }
+      )
+      .join('');
+}
+
+
+async function loadDashboard() {
+
+  errorBox.style.display =
+    'none';
+
+  try {
+
+    const response =
+      await fetch(
+        '/api/dashboard/learning',
+        {
+          credentials:
+            'include'
+        }
+      );
+
+    const data =
+      await response.json();
+
+    if (
+      !response.ok
+    ) {
+
+      throw new Error(
+        data.error ||
+        `HTTP ${response.status}`
+      );
+    }
+
+    const totals =
+      data.totals ||
+      {};
+
+    document.getElementById(
+      'brains'
+    ).textContent =
+      Number(
+        totals.brains || 0
+      );
+
+    document.getElementById(
+      'players'
+    ).textContent =
+      Number(
+        totals.players || 0
+      );
+
+    document.getElementById(
+      'games'
+    ).textContent =
+      Number(
+        totals.games || 0
+      );
+
+    document.getElementById(
+      'knowledge'
+    ).textContent =
+      Number(
+        totals.verifiedKnowledge || 0
+      );
+
+    document.getElementById(
+      'candidate'
+    ).textContent =
+      Number(
+        totals.candidateKnowledge || 0
+      );
+
+    renderGames(
+      data.games || []
+    );
+
+    renderKnowledge(
+      data.knowledge || []
+    );
+
+  } catch (error) {
+
+    errorBox.textContent =
+      'Unable to load dashboard: ' +
+      error.message;
+
+    errorBox.style.display =
+      'block';
+
+    renderGames([]);
+
+    renderKnowledge([]);
+  }
+}
+
+
+document
+  .getElementById(
+    'refresh'
+  )
+  .addEventListener(
+    'click',
+    loadDashboard
+  );
+
+
+loadDashboard();
+
+setInterval(
+  loadDashboard,
+  30000
+);
+
+</script>
+
+</body>
+</html>

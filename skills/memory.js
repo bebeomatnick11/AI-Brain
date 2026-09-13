@@ -1,0 +1,1 @@
+module.exports={id:'memory',name:'memory',description:'Use explicit user memory requests and relevant stored context.',triggers:['remember','nhớ','ghi nhớ','quên'],priority:85,enabled:true,scope:'system',aiGuidance:'Only store explicit memory requests automatically. Retrieve relevant memory when useful.'};

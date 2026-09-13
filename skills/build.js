@@ -1,0 +1,1 @@
+module.exports={id:'build',name:'build',description:'Help design and write complete code while preserving existing functionality.',triggers:['build','code','script','viết code'],priority:80,enabled:true,scope:'system',aiGuidance:'Prefer complete runnable code. Preserve existing features. State exact placement and dependencies.'};

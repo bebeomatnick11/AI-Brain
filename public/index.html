@@ -9,6 +9,7 @@
 </head>
 <body>
   <div id="app">
+
     <!-- LOGIN SCREEN -->
     <div id="login-screen" class="screen">
       <div class="login-card">
@@ -17,6 +18,7 @@
           <h1>AI Brain Registry</h1>
           <p class="subtitle">Roblox Adaptive Agents</p>
         </div>
+
         <form id="login-form">
           <div class="input-group">
             <label for="password">Mật khẩu truy cập</label>
@@ -28,90 +30,296 @@
               required
             />
           </div>
+
           <button type="submit" id="login-btn" class="btn btn-primary">
             <span class="btn-text">Đăng nhập</span>
             <span class="btn-loading hidden">Đang xác thực...</span>
           </button>
+
           <p id="login-error" class="error-msg hidden"></p>
         </form>
-        <p class="footer-note">Chỉ người có mật khẩu mới được xem danh sách Brain</p>
+
+        <p class="footer-note">
+          Chỉ người có mật khẩu mới được xem danh sách Brain
+        </p>
       </div>
     </div>
 
     <!-- DASHBOARD -->
     <div id="dashboard" class="screen hidden">
+
       <header class="header">
         <div class="header-left">
           <span class="logo-sm">🧠</span>
           <h2>AI Brain Registry</h2>
         </div>
+
         <div class="header-right">
-          <button id="logout-btn" class="btn btn-ghost">Đăng xuất</button>
+          <button id="learning-btn" class="btn btn-ghost">
+            🧠 Learning
+          </button>
+
+          <button id="back-dashboard-btn" class="btn btn-ghost hidden">
+            ← Dashboard
+          </button>
+
+          <button id="logout-btn" class="btn btn-ghost">
+            Đăng xuất
+          </button>
         </div>
       </header>
 
       <main class="main">
-        <!-- STATS -->
-        <section class="stats">
-          <div class="stat-card">
-            <div class="stat-value" id="stat-total">0</div>
-            <div class="stat-label">Tổng Brain</div>
-          </div>
-          <div class="stat-card online">
-            <div class="stat-value" id="stat-online">0</div>
-            <div class="stat-label">Online</div>
-          </div>
-          <div class="stat-card offline">
-            <div class="stat-value" id="stat-offline">0</div>
-            <div class="stat-label">Offline</div>
-          </div>
-        </section>
 
-        <!-- SEARCH & FILTER -->
-        <section class="controls">
-          <div class="search-box">
+        <!-- NORMAL DASHBOARD -->
+        <div id="dashboard-view">
+
+          <!-- STATS -->
+          <section class="stats">
+            <div class="stat-card">
+              <div class="stat-value" id="stat-total">0</div>
+              <div class="stat-label">Tổng Brain</div>
+            </div>
+
+            <div class="stat-card online">
+              <div class="stat-value" id="stat-online">0</div>
+              <div class="stat-label">Online</div>
+            </div>
+
+            <div class="stat-card offline">
+              <div class="stat-value" id="stat-offline">0</div>
+              <div class="stat-label">Offline</div>
+            </div>
+          </section>
+
+          <!-- SEARCH & FILTER -->
+          <section class="controls">
+            <div class="search-box">
+              <input
+                type="search"
+                id="search-input"
+                placeholder="Tìm theo UserId, DisplayName, Brain ID..."
+              />
+            </div>
+
+            <div class="filter-btns">
+              <button class="filter-btn active" data-status="">
+                Tất cả
+              </button>
+
+              <button class="filter-btn" data-status="online">
+                Online
+              </button>
+
+              <button class="filter-btn" data-status="offline">
+                Offline
+              </button>
+            </div>
+          </section>
+
+          <!-- BRAIN LIST -->
+          <section class="brain-list-section">
+            <div id="loading-state" class="state-box hidden">
+              <div class="spinner"></div>
+              <p>Đang tải dữ liệu...</p>
+            </div>
+
+            <div id="empty-state" class="state-box hidden">
+              <div class="empty-icon">🤖</div>
+              <p class="empty-title">
+                Chưa có AI Brain nào được tạo và chạy trong Roblox.
+              </p>
+              <p class="empty-desc">
+                Khi Agent đăng ký thành công, Brain sẽ xuất hiện tại đây.
+              </p>
+            </div>
+
+            <div id="error-state" class="state-box hidden">
+              <p class="error-title">Không thể tải dữ liệu</p>
+              <p id="error-detail"></p>
+              <button id="retry-btn" class="btn btn-primary">
+                Thử lại
+              </button>
+            </div>
+
+            <div id="brain-list" class="brain-list"></div>
+          </section>
+
+        </div>
+
+        <!-- LEARNING -->
+        <section id="learning-view" class="learning-view hidden">
+
+          <div class="learning-header">
+            <div>
+              <h1>🧠 Collective Learning</h1>
+              <p>
+                Những kiến thức mà Astra Brain đã học được từ hệ thống.
+              </p>
+            </div>
+
+            <button id="learning-refresh-btn" class="btn btn-ghost">
+              ↻ Làm mới
+            </button>
+          </div>
+
+          <!-- LEARNING STATS -->
+          <section class="learning-stats">
+
+            <div class="learning-stat-card">
+              <div class="learning-stat-icon">📚</div>
+              <div>
+                <div id="learning-total" class="learning-stat-value">0</div>
+                <div class="learning-stat-label">
+                  Kiến thức
+                </div>
+              </div>
+            </div>
+
+            <div class="learning-stat-card">
+              <div class="learning-stat-icon">🎮</div>
+              <div>
+                <div id="learning-games" class="learning-stat-value">0</div>
+                <div class="learning-stat-label">
+                  Games đã phát hiện
+                </div>
+              </div>
+            </div>
+
+            <div class="learning-stat-card">
+              <div class="learning-stat-icon">🔎</div>
+              <div>
+                <div id="learning-candidates" class="learning-stat-value">0</div>
+                <div class="learning-stat-label">
+                  Candidate
+                </div>
+              </div>
+            </div>
+
+            <div class="learning-stat-card">
+              <div class="learning-stat-icon">⚡</div>
+              <div>
+                <div id="learning-events" class="learning-stat-value">0</div>
+                <div class="learning-stat-label">
+                  Learning Events
+                </div>
+              </div>
+            </div>
+
+          </section>
+
+          <!-- LEARNING SEARCH -->
+          <section class="learning-controls">
+
             <input
               type="search"
-              id="search-input"
-              placeholder="Tìm theo UserId, DisplayName, Brain ID..."
+              id="learning-search"
+              placeholder="Tìm kiến thức, topic, game..."
             />
-          </div>
-          <div class="filter-btns">
-            <button class="filter-btn active" data-status="">Tất cả</button>
-            <button class="filter-btn" data-status="online">Online</button>
-            <button class="filter-btn" data-status="offline">Offline</button>
-          </div>
+
+            <div class="learning-tabs">
+              <button
+                class="learning-tab active"
+                data-learning-tab="knowledge"
+              >
+                📚 Knowledge
+              </button>
+
+              <button
+                class="learning-tab"
+                data-learning-tab="games"
+              >
+                🎮 Games
+              </button>
+            </div>
+
+          </section>
+
+          <!-- LEARNING CONTENT -->
+          <section id="learning-content">
+
+            <div id="learning-loading" class="state-box">
+              <div class="spinner"></div>
+              <p>Đang tải Learning...</p>
+            </div>
+
+            <div id="learning-error" class="state-box hidden">
+              <p class="error-title">
+                Không thể tải Learning
+              </p>
+
+              <p id="learning-error-detail"></p>
+
+              <button
+                id="learning-retry-btn"
+                class="btn btn-primary"
+              >
+                Thử lại
+              </button>
+            </div>
+
+            <div
+              id="learning-empty"
+              class="state-box hidden"
+            >
+              <div class="empty-icon">🧠</div>
+              <p class="empty-title">
+                Astra chưa có kiến thức nào.
+              </p>
+              <p class="empty-desc">
+                Khi Brain bắt đầu gửi learning events, chúng sẽ xuất hiện ở đây.
+              </p>
+            </div>
+
+            <div
+              id="learning-knowledge-list"
+              class="learning-list hidden"
+            ></div>
+
+            <div
+              id="learning-games-list"
+              class="learning-list hidden"
+            ></div>
+
+          </section>
+
         </section>
 
-        <!-- BRAIN LIST -->
-        <section class="brain-list-section">
-          <div id="loading-state" class="state-box hidden">
-            <div class="spinner"></div>
-            <p>Đang tải dữ liệu...</p>
-          </div>
-          <div id="empty-state" class="state-box hidden">
-            <div class="empty-icon">🤖</div>
-            <p class="empty-title">Chưa có AI Brain nào được tạo và chạy trong Roblox.</p>
-            <p class="empty-desc">Khi Agent đăng ký thành công, Brain sẽ xuất hiện tại đây.</p>
-          </div>
-          <div id="error-state" class="state-box hidden">
-            <p class="error-title">Không thể tải dữ liệu</p>
-            <p id="error-detail"></p>
-            <button id="retry-btn" class="btn btn-primary">Thử lại</button>
-          </div>
-          <div id="brain-list" class="brain-list"></div>
-        </section>
       </main>
     </div>
 
     <!-- DETAIL MODAL -->
     <div id="detail-modal" class="modal hidden">
       <div class="modal-backdrop"></div>
+
       <div class="modal-content">
-        <button class="modal-close" id="modal-close">&times;</button>
+        <button
+          class="modal-close"
+          id="modal-close"
+        >
+          &times;
+        </button>
+
         <div id="detail-body"></div>
       </div>
     </div>
+
+    <!-- LEARNING DETAIL MODAL -->
+    <div id="learning-detail-modal" class="modal hidden">
+      <div class="modal-backdrop learning-modal-backdrop"></div>
+
+      <div class="modal-content">
+        <button
+          class="modal-close"
+          id="learning-detail-close"
+        >
+          &times;
+        </button>
+
+        <div id="learning-detail-body"></div>
+      </div>
+    </div>
+
   </div>
 
   <script src="/app.js"></script>

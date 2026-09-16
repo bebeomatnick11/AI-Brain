@@ -53,6 +53,26 @@ const path = require('path');
 const crypto = require('crypto');
 const { URL } = require('url');
 
+const {
+  BrainRuntime
+} = require('./core/brain-runtime');
+
+const {
+  ToolRegistry
+} = require('./core/tool-registry');
+
+const memoryTool =
+  require('./tools/memory-tool');
+
+const knowledgeTool =
+  require('./tools/knowledge-tool');
+
+const playerTool =
+  require('./tools/player-tool');
+
+const gameTool =
+  require('./tools/game-tool');
+
 // ============================================================
 // CONFIG
 // ============================================================
@@ -60,11 +80,11 @@ const { URL } = require('url');
 const PORT = Number(process.env.PORT || 3000);
 
 const DASHBOARD_PASSWORD =
-  process.env.DASHBOARD_PASSWORD || 'ILove36';
+  process.env.DASHBOARD_PASSWORD || 'ChangeMe_InProduction';
 
 const BRAIN_API_SECRET =
   process.env.BRAIN_API_SECRET ||
-  'AstraBrainSecret_ChangeMe_InProduction_2026';
+  'AstraBrainSecret_ChangeMe_InProduction';
 
 const SESSION_SECRET =
   process.env.SESSION_SECRET ||
@@ -131,8 +151,11 @@ function createEmptyDB() {
     games: {},
 
     knowledge: {},
+    learningEvents: [],
 
-    learningEvents: []
+    languages: {},
+
+    languageObservations: []
   };
 }
 
@@ -182,18 +205,32 @@ function loadDB() {
           : {},
 
       knowledge:
-        data.knowledge &&
-        typeof data.knowledge ===
-        'object'
-          ? data.knowledge
-          : {},
+  data.knowledge &&
+  typeof data.knowledge ===
+  'object'
+    ? data.knowledge
+    : {},
 
       learningEvents:
-        Array.isArray(
-          data.learningEvents
-        )
-          ? data.learningEvents
-          : []
+  Array.isArray(
+    data.learningEvents
+  )
+    ? data.learningEvents
+    : [],
+
+      languages:
+  data.languages &&
+  typeof data.languages ===
+  'object'
+    ? data.languages
+    : {},
+
+      languageObservations:
+  Array.isArray(
+    data.languageObservations
+  )
+    ? data.languageObservations
+    : []
     };
 
   } catch (e) {
@@ -1084,6 +1121,588 @@ function getLearningGameKey(
       'unknown'
     )
   );
+}
+
+// ============================================================
+// ASTRA LANGUAGE LEARNING
+// ============================================================
+
+function ensureLanguageStores() {
+
+  if (
+    !db.languages ||
+    typeof db.languages !== 'object'
+  ) {
+    db.languages = {};
+  }
+
+  if (
+    !Array.isArray(
+      db.languageObservations
+    )
+  ) {
+    db.languageObservations = [];
+  }
+}
+
+function normalizeLanguageUserId(value) {
+
+  const id =
+    safeUserId(value);
+
+  return id || 'unknown';
+}
+
+function normalizeLanguage(value) {
+
+  const text =
+    String(value || '')
+      .trim()
+      .toLowerCase();
+
+  if (
+    text === 'vi' ||
+    text === 'vn' ||
+    text === 'vietnamese' ||
+    text === 'tiếng việt'
+  ) {
+    return 'vi';
+  }
+
+  if (
+    text === 'en' ||
+    text === 'english'
+  ) {
+    return 'en';
+  }
+
+  if (
+    text === 'zh' ||
+    text === 'chinese'
+  ) {
+    return 'zh';
+  }
+
+  if (
+    text === 'ja' ||
+    text === 'japanese'
+  ) {
+    return 'ja';
+  }
+
+  if (
+    text === 'ko' ||
+    text === 'korean'
+  ) {
+    return 'ko';
+  }
+
+  return 'unknown';
+}
+
+function normalizeSlang(value) {
+
+  const slang =
+    String(value || '')
+      .trim()
+      .toLowerCase()
+      .replace(
+        /\s+/g,
+        ' '
+      );
+
+  if (!slang) {
+    return null;
+  }
+
+  return slang.slice(
+    0,
+    80
+  );
+}
+
+function detectLanguageFromText(text) {
+
+  const value =
+    String(text || '')
+      .toLowerCase();
+
+  if (!value) {
+    return 'unknown';
+  }
+
+  const vietnamese =
+    (
+      value.match(
+        /[ăâđêôơưáàảãạắằẳẵặấầẩẫậéèẻẽẹếềểễệíìỉĩịóòỏõọốồổỗộớờởỡợúùủũụứừửữựýỳỷỹỵ]/g
+      ) || []
+    ).length;
+
+  const englishWords =
+    (
+      value.match(
+        /\b(the|and|you|your|this|that|what|why|how|bro|bruh|lol|game|play|win|lose|good|bad)\b/g
+      ) || []
+    ).length;
+
+  if (
+    vietnamese >= 2
+  ) {
+    return 'vi';
+  }
+
+  if (
+    englishWords >= 1
+  ) {
+    return 'en';
+  }
+
+  return 'unknown';
+}
+
+function getLanguageProfile(
+  userId
+) {
+
+  ensureLanguageStores();
+
+  const id =
+    normalizeLanguageUserId(
+      userId
+    );
+
+  if (
+    !db.languages[id]
+  ) {
+
+    db.languages[id] = {
+
+      userId:
+        id,
+
+      languages: {},
+
+      slang: {},
+
+      firstSeen:
+        now(),
+
+      lastSeen:
+        now(),
+
+      observationCount:
+        0
+    };
+  }
+
+  return db.languages[id];
+}
+
+function observeLanguage(
+  input
+) {
+
+  ensureLanguageStores();
+
+  if (
+    !input ||
+    typeof input !== 'object'
+  ) {
+    throw new Error(
+      'Invalid language observation'
+    );
+  }
+
+  const userId =
+    normalizeLanguageUserId(
+      input.userId
+    );
+
+  const text =
+    safeString(
+      input.text ||
+      input.message ||
+      '',
+      500
+    );
+
+  const language =
+    normalizeLanguage(
+      input.language ||
+      detectLanguageFromText(
+        text
+      )
+    );
+
+  const slang =
+    normalizeSlang(
+      input.slang ||
+      input.term
+    );
+
+  const timestamp =
+    now();
+
+  const profile =
+    getLanguageProfile(
+      userId
+    );
+
+  profile.lastSeen =
+    timestamp;
+
+  profile.observationCount++;
+
+  if (
+    !profile.languages[
+      language
+    ]
+  ) {
+    profile.languages[
+      language
+    ] = {
+
+      count: 0,
+
+      firstSeen:
+        timestamp,
+
+      lastSeen:
+        timestamp
+    };
+  }
+
+  profile.languages[
+    language
+  ].count++;
+
+  profile.languages[
+    language
+  ].lastSeen =
+    timestamp;
+
+  let slangResult =
+    null;
+
+  if (slang) {
+
+    if (
+      !profile.slang[
+        slang
+      ]
+    ) {
+
+      profile.slang[
+        slang
+      ] = {
+
+        count: 0,
+
+        firstSeen:
+          timestamp,
+
+        lastSeen:
+          timestamp,
+
+        confidence:
+          0,
+
+        status:
+          'candidate'
+      };
+    }
+
+    const entry =
+      profile.slang[
+        slang
+      ];
+
+    entry.count++;
+
+    entry.lastSeen =
+      timestamp;
+
+    /*
+     * Evidence-based learning.
+     *
+     * 1      = candidate
+     * 2-4    = possible
+     * 5-9    = learned
+     * 10+    = strong
+     */
+
+    if (
+      entry.count >= 10
+    ) {
+
+      entry.status =
+        'strong';
+
+      entry.confidence =
+        0.95;
+
+    } else if (
+      entry.count >= 5
+    ) {
+
+      entry.status =
+        'learned';
+
+      entry.confidence =
+        0.80;
+
+    } else if (
+      entry.count >= 2
+    ) {
+
+      entry.status =
+        'possible';
+
+      entry.confidence =
+        0.50;
+
+    } else {
+
+      entry.status =
+        'candidate';
+
+      entry.confidence =
+        0.20;
+    }
+
+    slangResult = {
+
+      term:
+        slang,
+
+      count:
+        entry.count,
+
+      status:
+        entry.status,
+
+      confidence:
+        entry.confidence
+    };
+  }
+
+  db.languageObservations.push({
+
+    id:
+      genId(),
+
+    userId:
+      userId,
+
+    language:
+      language,
+
+    slang:
+      slang,
+
+    timestamp:
+      timestamp
+  });
+
+  if (
+    db.languageObservations.length >
+    5000
+  ) {
+
+    db.languageObservations =
+      db.languageObservations.slice(
+        -5000
+      );
+  }
+
+  markDirty();
+
+  return {
+
+    success:
+      true,
+
+    userId:
+      userId,
+
+    language:
+      language,
+
+    slang:
+      slangResult
+  };
+}
+
+function getLanguageDashboard() {
+
+  ensureLanguageStores();
+
+  const users =
+    Object.values(
+      db.languages
+    );
+
+  const slangMap =
+    {};
+
+  let languageCounts =
+    {};
+
+  for (
+    const profile of users
+  ) {
+
+    for (
+      const [
+        language,
+        data
+      ] of Object.entries(
+        profile.languages ||
+        {}
+      )
+    ) {
+
+      languageCounts[
+        language
+      ] =
+        (
+          languageCounts[
+            language
+          ] || 0
+        ) +
+        Number(
+          data.count || 0
+        );
+    }
+
+    for (
+      const [
+        term,
+        data
+      ] of Object.entries(
+        profile.slang ||
+        {}
+      )
+    ) {
+
+      if (
+        !slangMap[
+          term
+        ]
+      ) {
+
+        slangMap[
+          term
+        ] = {
+
+          term:
+            term,
+
+          count:
+            0,
+
+          confidence:
+            0,
+
+          status:
+            'candidate'
+        };
+      }
+
+      slangMap[
+        term
+      ].count +=
+        Number(
+          data.count || 0
+        );
+
+      slangMap[
+        term
+      ].confidence =
+        Math.max(
+          slangMap[
+            term
+          ].confidence,
+          Number(
+            data.confidence || 0
+          )
+        );
+
+      if (
+        Number(
+          data.confidence || 0
+        ) >=
+        slangMap[
+          term
+        ].confidence
+      ) {
+
+        slangMap[
+          term
+        ].status =
+          data.status ||
+          'candidate';
+      }
+    }
+  }
+
+  return {
+
+    success:
+      true,
+
+    totals: {
+
+      users:
+        users.length,
+
+      observations:
+        db.languageObservations.length,
+
+      languages:
+        Object.keys(
+          languageCounts
+        ).length,
+
+      slang:
+        Object.keys(
+          slangMap
+        ).length
+    },
+
+    languages:
+      Object.entries(
+        languageCounts
+      )
+        .map(
+          ([
+            language,
+            count
+          ]) => ({
+            language,
+            count
+          })
+        )
+        .sort(
+          (a, b) =>
+            b.count -
+            a.count
+        ),
+
+    slang:
+      Object.values(
+        slangMap
+      )
+        .sort(
+          (a, b) =>
+            b.count -
+            a.count
+        )
+        .slice(
+          0,
+          200
+        )
+  };
 }
 
 // ============================================================
@@ -5188,6 +5807,71 @@ async function handler(
       }
     }
 
+// ========================================================
+// ASTRA LANGUAGE LEARNING: OBSERVE
+// ========================================================
+if (
+  pathname ===
+    '/api/brain/language/observe'
+  &&
+  method ===
+    'POST'
+) {
+
+  if (
+    !verifyBrain(
+      req
+    )
+  ) {
+
+    return json(
+      res,
+      401,
+      {
+        error:
+          'Invalid or missing Brain API secret'
+      },
+      corsHeaders
+    );
+  }
+
+  const body =
+    await readBody(
+      req
+    );
+
+  try {
+
+    const result =
+      observeLanguage(
+        body
+      );
+
+    saveDB(
+      true
+    );
+
+    return json(
+      res,
+      200,
+      result,
+      corsHeaders
+    );
+
+  } catch (e) {
+
+    return json(
+      res,
+      400,
+      {
+        error:
+          e.message
+      },
+      corsHeaders
+    );
+  }
+}
+
     // ========================================================
     // ASTRA BRAIN V6: LEARNING SUBMIT
     // ========================================================
@@ -5483,6 +6167,42 @@ async function handler(
         corsHeaders
       );
     }
+
+// ========================================================
+// DASHBOARD: LANGUAGE LEARNING
+// ========================================================
+if (
+  pathname ===
+    '/api/dashboard/language'
+  &&
+  method ===
+    'GET'
+) {
+
+  if (
+    !isAuth(
+      req
+    )
+  ) {
+
+    return json(
+      res,
+      401,
+      {
+        error:
+          'Unauthorized'
+      },
+      corsHeaders
+    );
+  }
+
+  return json(
+    res,
+    200,
+    getLanguageDashboard(),
+    corsHeaders
+  );
+}
 
     // ========================================================
     // DASHBOARD: BRAIN LIST

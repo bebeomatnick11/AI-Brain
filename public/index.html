@@ -2,26 +2,63 @@
 <html lang="vi">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <meta name="theme-color" content="#0a0a0f" />
-  <title>Roblox AI Brain Registry</title>
-  <link rel="stylesheet" href="/styles.css" />
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+  />
+
+  <meta
+    name="theme-color"
+    content="#070910"
+  />
+
+  <meta
+    name="color-scheme"
+    content="dark"
+  />
+
+  <title>AI Brain Registry</title>
+
+  <link
+    rel="stylesheet"
+    href="/styles.css"
+  />
 </head>
+
 <body>
+
   <div id="app">
 
-    <!-- LOGIN SCREEN -->
-    <div id="login-screen" class="screen">
+    <!-- =====================================================
+         LOGIN
+         ===================================================== -->
+
+    <div
+      id="login-screen"
+      class="screen"
+    >
+
       <div class="login-card">
-        <div class="logo">
-          <div class="logo-icon">🧠</div>
-          <h1>AI Brain Registry</h1>
-          <p class="subtitle">Roblox Adaptive Agents</p>
+
+        <div class="brand-mark">
+          🧠
         </div>
 
+        <h1>AI Brain Registry</h1>
+
+        <p>
+          Roblox Adaptive Agents
+        </p>
+
         <form id="login-form">
+
           <div class="input-group">
-            <label for="password">Mật khẩu truy cập</label>
+
+            <label for="password">
+              Mật khẩu truy cập
+            </label>
+
             <input
               type="password"
               id="password"
@@ -29,198 +66,512 @@
               autocomplete="current-password"
               required
             />
+
           </div>
 
-          <button type="submit" id="login-btn" class="btn btn-primary">
-            <span class="btn-text">Đăng nhập</span>
-            <span class="btn-loading hidden">Đang xác thực...</span>
+          <button
+            type="submit"
+            id="login-btn"
+            class="btn btn-primary"
+          >
+
+            <span class="btn-text">
+              Đăng nhập
+            </span>
+
+            <span class="btn-loading hidden">
+              Đang xác thực...
+            </span>
+
           </button>
 
-          <p id="login-error" class="error-msg hidden"></p>
+          <p
+            id="login-error"
+            class="error hidden"
+          ></p>
+
         </form>
 
-        <p class="footer-note">
-          Chỉ người có mật khẩu mới được xem danh sách Brain
+        <p class="small muted">
+          🔒 Chỉ người có mật khẩu mới được truy cập hệ thống.
         </p>
+
       </div>
+
     </div>
 
-    <!-- DASHBOARD -->
-    <div id="dashboard" class="screen hidden">
 
-      <header class="header">
+    <!-- =====================================================
+         DASHBOARD
+         ===================================================== -->
+
+    <div
+      id="dashboard"
+      class="hidden"
+    >
+
+      <!-- HEADER -->
+
+      <header class="topbar">
+
         <div class="header-left">
-          <span class="logo-sm">🧠</span>
-          <h2>AI Brain Registry</h2>
+
+          <div class="brand">
+
+            🧠 AI Brain Registry
+
+            <span class="sub">
+              Roblox Adaptive Agents
+            </span>
+
+          </div>
+
         </div>
 
-        <div class="header-right">
-          <button id="learning-btn" class="btn btn-ghost">
-            🧠 Learning
+
+        <div class="top-actions">
+
+          <button
+            id="learning-btn"
+            class="btn"
+            type="button"
+          >
+            🧠 <span>Learning</span>
           </button>
 
-          <button id="back-dashboard-btn" class="btn btn-ghost hidden">
-            ← Dashboard
+          <button
+            id="skills-btn"
+            class="btn"
+            type="button"
+          >
+            🛠️ <span>Skills</span>
           </button>
 
-          <button id="logout-btn" class="btn btn-ghost">
-            Đăng xuất
+          <button
+            id="back-dashboard-btn"
+            class="btn hidden"
+            type="button"
+          >
+            ← <span>Dashboard</span>
           </button>
+
+          <button
+            id="refresh-btn"
+            class="btn"
+            type="button"
+            title="Làm mới"
+          >
+            ↻
+          </button>
+
+          <button
+            id="logout-btn"
+            class="btn"
+            type="button"
+          >
+            🚪 <span>Đăng xuất</span>
+          </button>
+
         </div>
+
       </header>
 
-      <main class="main">
 
-        <!-- NORMAL DASHBOARD -->
-        <div id="dashboard-view">
+      <!-- ===================================================
+           MAIN
+           =================================================== -->
+
+      <main>
+
+
+        <!-- =================================================
+             NORMAL DASHBOARD
+             ================================================= -->
+
+        <section
+          id="dashboard-view"
+          class="tab-page"
+        >
 
           <!-- STATS -->
+
           <section class="stats">
-            <div class="stat-card">
-              <div class="stat-value" id="stat-total">0</div>
-              <div class="stat-label">Tổng Brain</div>
+
+            <div class="stat">
+
+              <div
+                class="stat-value n"
+                id="stat-total"
+              >
+                0
+              </div>
+
+              <div class="stat-label l">
+                Tổng Brain
+              </div>
+
             </div>
 
-            <div class="stat-card online">
-              <div class="stat-value" id="stat-online">0</div>
-              <div class="stat-label">Online</div>
+
+            <div class="stat">
+
+              <div
+                class="stat-value n online"
+                id="stat-online"
+              >
+                0
+              </div>
+
+              <div class="stat-label l">
+                Online
+              </div>
+
             </div>
 
-            <div class="stat-card offline">
-              <div class="stat-value" id="stat-offline">0</div>
-              <div class="stat-label">Offline</div>
+
+            <div class="stat">
+
+              <div
+                class="stat-value n offline"
+                id="stat-offline"
+              >
+                0
+              </div>
+
+              <div class="stat-label l">
+                Offline
+              </div>
+
             </div>
+
+
+            <div class="stat">
+
+              <div
+                class="stat-value n"
+                id="stat-active"
+              >
+                —
+              </div>
+
+              <div class="stat-label l">
+                Active Agents
+              </div>
+
+            </div>
+
+
+            <div class="stat">
+
+              <div
+                class="stat-value n"
+                id="stat-games"
+              >
+                —
+              </div>
+
+              <div class="stat-label l">
+                Games
+              </div>
+
+            </div>
+
+
+            <div class="stat">
+
+              <div
+                class="stat-value n"
+                id="stat-events"
+              >
+                —
+              </div>
+
+              <div class="stat-label l">
+                Events
+              </div>
+
+            </div>
+
           </section>
 
-          <!-- SEARCH & FILTER -->
-          <section class="controls">
-            <div class="search-box">
+
+          <!-- SEARCH -->
+
+          <section class="panel">
+
+            <div class="toolbar">
+
               <input
                 type="search"
                 id="search-input"
-                placeholder="Tìm theo UserId, DisplayName, Brain ID..."
+                class="search"
+                placeholder="🔎  Tìm UserId, DisplayName, Brain ID..."
+                autocomplete="off"
               />
-            </div>
 
-            <div class="filter-btns">
-              <button class="filter-btn active" data-status="">
+              <button
+                class="btn filter-btn active"
+                data-status=""
+                type="button"
+              >
                 Tất cả
               </button>
 
-              <button class="filter-btn" data-status="online">
-                Online
+              <button
+                class="btn filter-btn"
+                data-status="online"
+                type="button"
+              >
+                🟢 Online
               </button>
 
-              <button class="filter-btn" data-status="offline">
-                Offline
+              <button
+                class="btn filter-btn"
+                data-status="offline"
+                type="button"
+              >
+                🔴 Offline
               </button>
+
             </div>
+
           </section>
+
 
           <!-- BRAIN LIST -->
-          <section class="brain-list-section">
-            <div id="loading-state" class="state-box hidden">
+
+          <section class="panel">
+
+            <h2>
+              🤖 Registered Brains
+            </h2>
+
+
+            <div
+              id="loading-state"
+              class="empty hidden"
+            >
+
               <div class="spinner"></div>
-              <p>Đang tải dữ liệu...</p>
+
+              <p>
+                Đang tải dữ liệu...
+              </p>
+
             </div>
 
-            <div id="empty-state" class="state-box hidden">
-              <div class="empty-icon">🤖</div>
-              <p class="empty-title">
-                Chưa có AI Brain nào được tạo và chạy trong Roblox.
+
+            <div
+              id="empty-state"
+              class="empty hidden"
+            >
+
+              <div class="brand-mark">
+                🤖
+              </div>
+
+              <strong>
+                Chưa có AI Brain nào.
+              </strong>
+
+              <p>
+                Khi Agent đăng ký thành công,
+                Brain sẽ xuất hiện tại đây.
               </p>
-              <p class="empty-desc">
-                Khi Agent đăng ký thành công, Brain sẽ xuất hiện tại đây.
-              </p>
+
             </div>
 
-            <div id="error-state" class="state-box hidden">
-              <p class="error-title">Không thể tải dữ liệu</p>
+
+            <div
+              id="error-state"
+              class="empty hidden"
+            >
+
+              <div class="brand-mark">
+                ⚠️
+              </div>
+
+              <strong>
+                Không thể tải dữ liệu
+              </strong>
+
               <p id="error-detail"></p>
-              <button id="retry-btn" class="btn btn-primary">
-                Thử lại
+
+              <button
+                id="retry-btn"
+                class="btn btn-primary"
+                type="button"
+              >
+                ↻ Thử lại
               </button>
+
             </div>
 
-            <div id="brain-list" class="brain-list"></div>
+
+            <div
+              id="brain-list"
+              class="list"
+            ></div>
+
           </section>
 
-        </div>
+        </section>
 
-        <!-- LEARNING -->
-        <section id="learning-view" class="learning-view hidden">
+
+        <!-- =================================================
+             LEARNING
+             ================================================= -->
+
+        <section
+          id="learning-view"
+          class="learning-view hidden tab-page"
+        >
 
           <div class="learning-header">
+
             <div>
-              <h1>🧠 Collective Learning</h1>
+
+              <h1>
+                🧠 Collective Learning
+              </h1>
+
               <p>
-                Những kiến thức mà Astra Brain đã học được từ hệ thống.
+                Kiến thức mà Astra Brain đã học được từ hệ thống.
               </p>
+
             </div>
 
-            <button id="learning-refresh-btn" class="btn btn-ghost">
+            <button
+              id="learning-refresh-btn"
+              class="btn"
+              type="button"
+            >
               ↻ Làm mới
             </button>
+
           </div>
 
+
           <!-- LEARNING STATS -->
+
           <section class="learning-stats">
 
             <div class="learning-stat-card">
-              <div class="learning-stat-icon">📚</div>
+
+              <div class="learning-stat-icon">
+                📚
+              </div>
+
               <div>
-                <div id="learning-total" class="learning-stat-value">0</div>
+
+                <div
+                  id="learning-total"
+                  class="learning-stat-value"
+                >
+                  0
+                </div>
+
                 <div class="learning-stat-label">
                   Kiến thức
                 </div>
+
               </div>
+
             </div>
 
+
             <div class="learning-stat-card">
-              <div class="learning-stat-icon">🎮</div>
+
+              <div class="learning-stat-icon">
+                🎮
+              </div>
+
               <div>
-                <div id="learning-games" class="learning-stat-value">0</div>
+
+                <div
+                  id="learning-games"
+                  class="learning-stat-value"
+                >
+                  0
+                </div>
+
                 <div class="learning-stat-label">
                   Games đã phát hiện
                 </div>
+
               </div>
+
             </div>
 
+
             <div class="learning-stat-card">
-              <div class="learning-stat-icon">🔎</div>
+
+              <div class="learning-stat-icon">
+                🔎
+              </div>
+
               <div>
-                <div id="learning-candidates" class="learning-stat-value">0</div>
+
+                <div
+                  id="learning-candidates"
+                  class="learning-stat-value"
+                >
+                  0
+                </div>
+
                 <div class="learning-stat-label">
                   Candidate
                 </div>
+
               </div>
+
             </div>
 
+
             <div class="learning-stat-card">
-              <div class="learning-stat-icon">⚡</div>
+
+              <div class="learning-stat-icon">
+                ⚡
+              </div>
+
               <div>
-                <div id="learning-events" class="learning-stat-value">0</div>
+
+                <div
+                  id="learning-events"
+                  class="learning-stat-value"
+                >
+                  0
+                </div>
+
                 <div class="learning-stat-label">
                   Learning Events
                 </div>
+
               </div>
+
             </div>
 
           </section>
 
-          <!-- LEARNING SEARCH -->
-          <section class="learning-controls">
+
+          <!-- SEARCH / TABS -->
+
+          <section class="panel learning-controls">
 
             <input
               type="search"
               id="learning-search"
-              placeholder="Tìm kiến thức, topic, game..."
+              placeholder="🔎  Tìm kiến thức, topic, game..."
+              autocomplete="off"
             />
 
+
             <div class="learning-tabs">
+
               <button
                 class="learning-tab active"
                 data-learning-tab="knowledge"
+                type="button"
               >
                 📚 Knowledge
               </button>
@@ -228,53 +579,89 @@
               <button
                 class="learning-tab"
                 data-learning-tab="games"
+                type="button"
               >
                 🎮 Games
               </button>
+
             </div>
 
           </section>
 
-          <!-- LEARNING CONTENT -->
-          <section id="learning-content">
 
-            <div id="learning-loading" class="state-box">
+          <!-- LEARNING CONTENT -->
+
+          <section
+            id="learning-content"
+            class="panel"
+          >
+
+            <div
+              id="learning-loading"
+              class="empty"
+            >
+
               <div class="spinner"></div>
-              <p>Đang tải Learning...</p>
+
+              <p>
+                Đang tải Learning...
+              </p>
+
             </div>
 
-            <div id="learning-error" class="state-box hidden">
-              <p class="error-title">
+
+            <div
+              id="learning-error"
+              class="empty hidden"
+            >
+
+              <div class="brand-mark">
+                ⚠️
+              </div>
+
+              <strong>
                 Không thể tải Learning
-              </p>
+              </strong>
 
               <p id="learning-error-detail"></p>
 
               <button
                 id="learning-retry-btn"
                 class="btn btn-primary"
+                type="button"
               >
-                Thử lại
+                ↻ Thử lại
               </button>
+
             </div>
+
 
             <div
               id="learning-empty"
-              class="state-box hidden"
+              class="empty hidden"
             >
-              <div class="empty-icon">🧠</div>
-              <p class="empty-title">
+
+              <div class="brand-mark">
+                🧠
+              </div>
+
+              <strong>
                 Astra chưa có kiến thức nào.
+              </strong>
+
+              <p>
+                Khi Brain bắt đầu gửi learning events,
+                chúng sẽ xuất hiện ở đây.
               </p>
-              <p class="empty-desc">
-                Khi Brain bắt đầu gửi learning events, chúng sẽ xuất hiện ở đây.
-              </p>
+
             </div>
+
 
             <div
               id="learning-knowledge-list"
               class="learning-list hidden"
             ></div>
+
 
             <div
               id="learning-games-list"
@@ -285,43 +672,232 @@
 
         </section>
 
+
+        <!-- =================================================
+             SKILLS
+             ================================================= -->
+
+        <section
+          id="skills-view"
+          class="learning-view hidden tab-page"
+        >
+
+          <div class="learning-header">
+
+            <div>
+
+              <h1>
+                🛠️ Skills
+              </h1>
+
+              <p>
+                Built-in skills và các skill do người dùng tạo.
+              </p>
+
+            </div>
+
+            <button
+              id="skills-refresh-btn"
+              class="btn"
+              type="button"
+            >
+              ↻ Làm mới
+            </button>
+
+          </div>
+
+
+          <!-- SKILLS SEARCH -->
+
+          <section class="panel learning-controls">
+
+            <input
+              type="search"
+              id="skills-search"
+              placeholder="🔎  Tìm skill, owner, tool, permission..."
+              autocomplete="off"
+            />
+
+
+            <div class="learning-tabs">
+
+              <button
+                class="learning-tab active"
+                data-skill-tab="all"
+                type="button"
+              >
+                ✨ Tất cả
+              </button>
+
+              <button
+                class="learning-tab"
+                data-skill-tab="builtin"
+                type="button"
+              >
+                🔧 Built-in
+              </button>
+
+              <button
+                class="learning-tab"
+                data-skill-tab="user"
+                type="button"
+              >
+                👤 User Created
+              </button>
+
+            </div>
+
+          </section>
+
+
+          <!-- SKILLS CONTENT -->
+
+          <section
+            id="skills-content"
+            class="panel"
+          >
+
+            <div
+              id="skills-loading"
+              class="empty"
+            >
+
+              <div class="spinner"></div>
+
+              <p>
+                Đang tải Skills...
+              </p>
+
+            </div>
+
+
+            <div
+              id="skills-error"
+              class="empty hidden"
+            >
+
+              <div class="brand-mark">
+                ⚠️
+              </div>
+
+              <strong>
+                Không thể tải Skills
+              </strong>
+
+              <p id="skills-error-detail"></p>
+
+              <button
+                id="skills-retry-btn"
+                class="btn btn-primary"
+                type="button"
+              >
+                ↻ Thử lại
+              </button>
+
+            </div>
+
+
+            <div
+              id="skills-empty"
+              class="empty hidden"
+            >
+
+              <div class="brand-mark">
+                🛠️
+              </div>
+
+              <strong>
+                Chưa có Skill nào.
+              </strong>
+
+              <p>
+                Các Built-in Skill sẽ xuất hiện tại đây.
+              </p>
+
+            </div>
+
+
+            <div
+              id="skills-list"
+              class="learning-list"
+            ></div>
+
+          </section>
+
+        </section>
+
       </main>
+
     </div>
 
-    <!-- DETAIL MODAL -->
-    <div id="detail-modal" class="modal hidden">
-      <div class="modal-backdrop"></div>
 
-      <div class="modal-content">
+    <!-- =====================================================
+         BRAIN DETAIL MODAL
+         ===================================================== -->
+
+    <div
+      id="detail-modal"
+      class="modal hidden"
+    >
+
+      <div class="backdrop"></div>
+
+      <div class="modal-card">
+
         <button
-          class="modal-close"
+          class="close"
           id="modal-close"
+          type="button"
+          aria-label="Đóng"
         >
           &times;
         </button>
 
         <div id="detail-body"></div>
+
       </div>
+
     </div>
 
-    <!-- LEARNING DETAIL MODAL -->
-    <div id="learning-detail-modal" class="modal hidden">
-      <div class="modal-backdrop learning-modal-backdrop"></div>
 
-      <div class="modal-content">
+    <!-- =====================================================
+         LEARNING DETAIL MODAL
+         ===================================================== -->
+
+    <div
+      id="learning-detail-modal"
+      class="modal hidden"
+    >
+
+      <div
+        class="backdrop learning-modal-backdrop"
+      ></div>
+
+      <div class="modal-card">
+
         <button
-          class="modal-close"
+          class="close"
           id="learning-detail-close"
+          type="button"
+          aria-label="Đóng"
         >
           &times;
         </button>
 
         <div id="learning-detail-body"></div>
+
       </div>
+
     </div>
 
   </div>
 
+
+  <!-- =======================================================
+       APP JS
+       ======================================================= -->
+
   <script src="/app.js"></script>
+
 </body>
 </html>

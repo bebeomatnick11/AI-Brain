@@ -9,25 +9,71 @@
   --good:#48d597;
   --bad:#ff647c;
   --warn:#f4c45e;
-  --shadow:0 16px 50px rgba(0,0,0,.28)
+  --shadow:0 16px 50px rgba(0,0,0,.28);
+
+  /* ==========================================================
+     LEARNING / SKILLS COMPATIBILITY VARIABLES
+     ========================================================== */
+
+  --text-muted:var(--muted);
+  --bg-card:var(--panel);
+  --border:var(--line);
+  --radius:18px;
+  --bg-elevated:var(--panel2);
+  --accent-hover:#9ab2ff;
+  --online:var(--good);
 }
 
-*{box-sizing:border-box}
+*{
+  box-sizing:border-box;
+}
+
+html{
+  min-height:100%;
+  background:var(--bg);
+}
 
 body{
   margin:0;
-  background:radial-gradient(circle at top,#11192a 0,#070910 48%);
+  min-height:100vh;
+  background:radial-gradient(
+    circle at top,
+    #11192a 0,
+    #070910 48%
+  );
   color:var(--text);
-  font:14px/1.5 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif
+  font:14px/1.5 system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
 }
 
-.hidden{display:none!important}
+button,
+input,
+textarea,
+select{
+  font:inherit;
+}
+
+button{
+  -webkit-tap-highlight-color:transparent;
+}
+
+.hidden{
+  display:none!important;
+}
+
+
+/* ============================================================
+   LOGIN
+   ============================================================ */
 
 .screen{
   min-height:100vh;
   display:grid;
   place-items:center;
-  padding:20px
+  padding:20px;
 }
 
 .login-card{
@@ -37,16 +83,20 @@ body{
   border:1px solid var(--line);
   border-radius:24px;
   box-shadow:var(--shadow);
-  text-align:center
+  text-align:center;
 }
 
-.brand-mark{font-size:52px}
+.brand-mark{
+  font-size:52px;
+}
 
-.login-card h1{margin:8px 0 4px}
+.login-card h1{
+  margin:8px 0 4px;
+}
 
 .login-card p{
   color:var(--muted);
-  margin:0 0 24px
+  margin:0 0 24px;
 }
 
 .login-card input{
@@ -56,7 +106,11 @@ body{
   border:1px solid var(--line);
   border-radius:12px;
   color:var(--text);
-  outline:none
+  outline:none;
+}
+
+.login-card input:focus{
+  border-color:var(--accent);
 }
 
 .login-card button,
@@ -68,7 +122,11 @@ body{
   background:var(--accent);
   color:#07101f;
   font-weight:800;
-  cursor:pointer
+  cursor:pointer;
+}
+
+.login-card button:hover{
+  filter:brightness(1.08);
 }
 
 .error{
@@ -77,8 +135,13 @@ body{
   background:rgba(255,100,124,.08);
   color:#ff9bac;
   border-radius:10px;
-  margin-top:12px
+  margin-top:12px;
 }
+
+
+/* ============================================================
+   TOP BAR
+   ============================================================ */
 
 .topbar{
   position:sticky;
@@ -91,33 +154,45 @@ body{
   padding:14px 20px;
   background:rgba(7,9,16,.88);
   backdrop-filter:blur(18px);
-  border-bottom:1px solid var(--line)
+  -webkit-backdrop-filter:blur(18px);
+  border-bottom:1px solid var(--line);
 }
 
 .brand{
   font-weight:900;
-  letter-spacing:.5px
+  letter-spacing:.5px;
 }
 
 .sub{
   color:var(--muted);
-  margin-left:10px
+  margin-left:10px;
 }
 
 .top-actions{
   display:flex;
   align-items:center;
-  gap:8px
+  gap:8px;
 }
 
 .top-actions button{
   margin:0;
   background:var(--panel2);
   color:var(--text);
-  border:1px solid var(--line)
+  border:1px solid var(--line);
 }
 
-#refresh-btn{font-size:18px}
+.top-actions button:hover{
+  border-color:#3b4b69;
+}
+
+#refresh-btn{
+  font-size:18px;
+}
+
+
+/* ============================================================
+   MAIN TABS
+   ============================================================ */
 
 .tabs{
   position:sticky;
@@ -128,7 +203,14 @@ body{
   overflow:auto;
   padding:9px 20px;
   background:rgba(7,9,16,.8);
-  border-bottom:1px solid var(--line)
+  backdrop-filter:blur(18px);
+  -webkit-backdrop-filter:blur(18px);
+  border-bottom:1px solid var(--line);
+  scrollbar-width:none;
+}
+
+.tabs::-webkit-scrollbar{
+  display:none;
 }
 
 .tab{
@@ -138,96 +220,132 @@ body{
   color:var(--muted);
   padding:9px 12px;
   border-radius:10px;
-  cursor:pointer
+  cursor:pointer;
 }
 
 .tab.active,
 .tab:hover{
   background:var(--panel2);
   border-color:var(--line);
-  color:var(--text)
+  color:var(--text);
 }
+
+
+/* ============================================================
+   MAIN
+   ============================================================ */
 
 main{
   max-width:1500px;
   margin:auto;
-  padding:20px
+  padding:20px;
 }
 
 .tab-page{
-  animation:fade .15s ease
+  animation:fade .15s ease;
 }
 
 @keyframes fade{
   from{
     opacity:.5;
-    transform:translateY(3px)
+    transform:translateY(3px);
   }
+
   to{
     opacity:1;
-    transform:none
+    transform:none;
   }
 }
+
+
+/* ============================================================
+   STATS
+   ============================================================ */
 
 .stats{
   display:grid;
   grid-template-columns:repeat(6,1fr);
   gap:12px;
-  margin-bottom:18px
+  margin-bottom:18px;
 }
 
 .stat{
-  background:linear-gradient(145deg,var(--panel2),var(--panel));
+  background:linear-gradient(
+    145deg,
+    var(--panel2),
+    var(--panel)
+  );
   border:1px solid var(--line);
   border-radius:16px;
-  padding:17px
+  padding:17px;
 }
 
 .stat .n{
   font-size:28px;
-  font-weight:900
+  font-weight:900;
 }
 
 .stat .l{
   color:var(--muted);
-  margin-top:2px
+  margin-top:2px;
 }
+
+
+/* ============================================================
+   GRID
+   ============================================================ */
 
 .grid{
   display:grid;
-  grid-template-columns:repeat(2,minmax(0,1fr));
-  gap:14px
+  grid-template-columns:repeat(
+    2,
+    minmax(0,1fr)
+  );
+  gap:14px;
 }
 
 .grid3{
   display:grid;
-  grid-template-columns:repeat(3,minmax(0,1fr));
-  gap:14px
+  grid-template-columns:repeat(
+    3,
+    minmax(0,1fr)
+  );
+  gap:14px;
 }
+
+
+/* ============================================================
+   PANELS
+   ============================================================ */
 
 .panel{
   background:rgba(13,17,27,.9);
   border:1px solid var(--line);
   border-radius:18px;
   padding:17px;
-  box-shadow:0 10px 30px rgba(0,0,0,.12)
+  box-shadow:0 10px 30px rgba(0,0,0,.12);
 }
 
 .panel h2{
   font-size:16px;
-  margin:0 0 13px
+  margin:0 0 13px;
 }
 
 .panel h3{
   font-size:14px;
-  margin:16px 0 8px
+  margin:16px 0 8px;
 }
+
+
+/* ============================================================
+   TOOLBAR / SEARCH
+   ============================================================ */
 
 .toolbar{
   display:flex;
   gap:8px;
   flex-wrap:wrap;
-  margin-bottom:14px
+  margin-bottom:14px;
 }
 
 .search{
@@ -237,12 +355,22 @@ main{
   border:1px solid var(--line);
   color:var(--text);
   border-radius:10px;
-  padding:10px 12px
+  padding:10px 12px;
+  outline:none;
 }
+
+.search:focus{
+  border-color:var(--accent);
+}
+
+
+/* ============================================================
+   LIST / ITEMS
+   ============================================================ */
 
 .list{
   display:grid;
-  gap:9px
+  gap:9px;
 }
 
 .item{
@@ -253,11 +381,20 @@ main{
   border:1px solid var(--line);
   background:#0a0f18;
   border-radius:13px;
-  cursor:pointer
+  cursor:pointer;
+  transition:
+    border-color .15s ease,
+    transform .1s ease,
+    background .15s ease;
 }
 
 .item:hover{
-  border-color:#3b4b69
+  border-color:#3b4b69;
+  background:#0c121d;
+}
+
+.item:active{
+  transform:scale(.995);
 }
 
 .thumb{
@@ -266,29 +403,38 @@ main{
   object-fit:cover;
   border-radius:12px;
   background:#151b28;
-  flex:none
+  flex:none;
 }
 
 .grow{
   min-width:0;
-  flex:1
+  flex:1;
 }
 
 .title{
   font-weight:800;
   overflow:hidden;
   text-overflow:ellipsis;
-  white-space:nowrap
+  white-space:nowrap;
 }
 
-.muted{color:var(--muted)}
+.muted{
+  color:var(--muted);
+}
 
-.small{font-size:12px}
+.small{
+  font-size:12px;
+}
+
+
+/* ============================================================
+   CHIPS
+   ============================================================ */
 
 .chips{
   display:flex;
   flex-wrap:wrap;
-  gap:6px
+  gap:6px;
 }
 
 .chip{
@@ -298,33 +444,51 @@ main{
   background:#171f31;
   border:1px solid var(--line);
   font-size:12px;
-  color:#c8d3e9
+  color:#c8d3e9;
 }
 
-.online{color:var(--good)}
+.online{
+  color:var(--good);
+}
 
-.offline{color:var(--bad)}
+.offline{
+  color:var(--bad);
+}
 
-.verified{color:var(--good)}
+.verified{
+  color:var(--good);
+}
 
-.candidate{color:var(--warn)}
+.candidate{
+  color:var(--warn);
+}
+
+
+/* ============================================================
+   KEY / VALUE
+   ============================================================ */
 
 .kv{
   display:grid;
   grid-template-columns:160px 1fr;
   gap:8px;
   padding:7px 0;
-  border-bottom:1px solid rgba(32,41,58,.65)
+  border-bottom:1px solid rgba(32,41,58,.65);
 }
 
 .kv:last-child{
-  border-bottom:0
+  border-bottom:0;
 }
 
 .kv b{
   color:var(--muted);
-  font-weight:600
+  font-weight:600;
 }
+
+
+/* ============================================================
+   DESCRIPTION
+   ============================================================ */
 
 .desc{
   white-space:pre-wrap;
@@ -334,19 +498,24 @@ main{
   border-radius:10px;
   padding:12px;
   max-height:220px;
-  overflow:auto
+  overflow:auto;
 }
+
+
+/* ============================================================
+   TABLE
+   ============================================================ */
 
 .table-wrap{
   overflow:auto;
   border:1px solid var(--line);
-  border-radius:13px
+  border-radius:13px;
 }
 
 table{
   width:100%;
   border-collapse:collapse;
-  min-width:650px
+  min-width:650px;
 }
 
 th,
@@ -354,31 +523,41 @@ td{
   text-align:left;
   padding:10px 11px;
   border-bottom:1px solid var(--line);
-  vertical-align:top
+  vertical-align:top;
 }
 
 th{
   color:var(--muted);
   font-size:12px;
-  background:#0a0e17
+  background:#0a0e17;
 }
 
 tr:last-child td{
-  border-bottom:0
+  border-bottom:0;
 }
+
+
+/* ============================================================
+   PROGRESS BAR
+   ============================================================ */
 
 .bar{
   height:8px;
   background:#151c2a;
   border-radius:99px;
-  overflow:hidden
+  overflow:hidden;
 }
 
 .bar i{
   display:block;
   height:100%;
-  background:var(--accent)
+  background:var(--accent);
 }
+
+
+/* ============================================================
+   MODAL
+   ============================================================ */
 
 .modal{
   position:fixed;
@@ -386,14 +565,15 @@ tr:last-child td{
   z-index:30;
   display:grid;
   place-items:center;
-  padding:18px
+  padding:18px;
 }
 
 .backdrop{
   position:absolute;
   inset:0;
   background:rgba(0,0,0,.72);
-  backdrop-filter:blur(5px)
+  backdrop-filter:blur(5px);
+  -webkit-backdrop-filter:blur(5px);
 }
 
 .modal-card{
@@ -405,7 +585,7 @@ tr:last-child td{
   border:1px solid var(--line);
   border-radius:20px;
   padding:22px;
-  box-shadow:var(--shadow)
+  box-shadow:var(--shadow);
 }
 
 .close{
@@ -416,486 +596,753 @@ tr:last-child td{
   border:0;
   color:var(--muted);
   font-size:28px;
-  cursor:pointer
+  cursor:pointer;
 }
+
+.close:hover{
+  color:var(--text);
+}
+
+
+/* ============================================================
+   GAME HERO
+   ============================================================ */
 
 .hero-game{
   display:grid;
   grid-template-columns:170px 1fr;
-  gap:16px
+  gap:16px;
 }
 
 .hero-game img{
   width:170px;
   height:110px;
   object-fit:cover;
-  border-radius:13px
+  border-radius:13px;
 }
+
+
+/* ============================================================
+   EMPTY
+   ============================================================ */
 
 .empty{
   padding:30px;
   text-align:center;
-  color:var(--muted)
+  color:var(--muted);
 }
 
-@media(max-width:1000px){
-  .stats{
-    grid-template-columns:repeat(3,1fr)
-  }
 
-  .grid3{
-    grid-template-columns:1fr 1fr
-  }
-}
-
-@media(max-width:700px){
-  .topbar{
-    align-items:flex-start
-  }
-
-  .sub{
-    display:block;
-    margin:0
-  }
-
-  .top-actions span{
-    display:none
-  }
-
-  .tabs{
-    top:88px;
-    padding:8px 12px
-  }
-
-  main{
-    padding:12px
-  }
-
-  .stats,
-  .grid,
-  .grid3{
-    grid-template-columns:1fr
-  }
-
-  .stat .n{
-    font-size:24px
-  }
-
-  .hero-game{
-    grid-template-columns:1fr
-  }
-
-  .hero-game img{
-    width:100%;
-    height:170px
-  }
-
-  .kv{
-    grid-template-columns:120px 1fr
-  }
-
-  .modal-card{
-    padding:18px 13px
-  }
-}
 /* ============================================================
    LEARNING DASHBOARD
    ============================================================ */
 
-.learning-view {
-  width: 100%;
+.learning-view{
+  width:100%;
 }
 
-.learning-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 20px;
+.learning-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  margin-bottom:20px;
 }
 
-.learning-header h1 {
-  font-size: 22px;
-  line-height: 1.2;
-  margin-bottom: 6px;
+.learning-header h1{
+  font-size:22px;
+  line-height:1.2;
+  margin:0 0 6px;
 }
 
-.learning-header p {
-  color: var(--text-muted);
-  font-size: 13px;
+.learning-header p{
+  color:var(--text-muted);
+  font-size:13px;
+  margin:0;
 }
 
-.learning-stats {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 10px;
-  margin-bottom: 20px;
+
+/* ============================================================
+   LEARNING STATS
+   ============================================================ */
+
+.learning-stats{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:10px;
+  margin-bottom:20px;
 }
 
-.learning-stat-card {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 15px;
+.learning-stat-card{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  background:var(--bg-card);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:15px;
 }
 
-.learning-stat-icon {
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--bg-elevated);
-  border-radius: 10px;
-  font-size: 20px;
-  flex-shrink: 0;
+.learning-stat-icon{
+  width:40px;
+  height:40px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:var(--bg-elevated);
+  border-radius:10px;
+  font-size:20px;
+  flex-shrink:0;
 }
 
-.learning-stat-value {
-  font-size: 22px;
-  font-weight: 700;
-  line-height: 1.1;
+.learning-stat-value{
+  font-size:22px;
+  font-weight:700;
+  line-height:1.1;
 }
 
-.learning-stat-label {
-  margin-top: 4px;
-  color: var(--text-muted);
-  font-size: 11px;
+.learning-stat-label{
+  margin-top:4px;
+  color:var(--text-muted);
+  font-size:11px;
 }
 
-.learning-controls {
-  margin-bottom: 16px;
+
+/* ============================================================
+   LEARNING CONTROLS
+   ============================================================ */
+
+.learning-controls{
+  margin-bottom:16px;
 }
 
-.learning-controls > input {
-  width: 100%;
-  padding: 12px 14px;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  color: var(--text);
-  font-size: 15px;
-  outline: none;
-  margin-bottom: 12px;
+.learning-controls > input{
+  width:100%;
+  padding:12px 14px;
+  background:var(--bg-card);
+  border:1px solid var(--border);
+  border-radius:10px;
+  color:var(--text);
+  font-size:15px;
+  outline:none;
+  margin-bottom:12px;
 }
 
-.learning-controls > input:focus {
-  border-color: var(--accent);
+.learning-controls > input:focus{
+  border-color:var(--accent);
 }
 
-.learning-tabs {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
+.learning-tabs{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
 }
 
-.learning-tab {
-  padding: 8px 14px;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  color: var(--text-muted);
-  font-size: 13px;
-  cursor: pointer;
+.learning-tab{
+  padding:8px 14px;
+  background:var(--bg-card);
+  border:1px solid var(--border);
+  border-radius:20px;
+  color:var(--text-muted);
+  font-size:13px;
+  cursor:pointer;
+  transition:
+    background .15s ease,
+    border-color .15s ease,
+    color .15s ease;
 }
 
 .learning-tab.active,
-.learning-tab:hover {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #fff;
+.learning-tab:hover{
+  background:var(--accent);
+  border-color:var(--accent);
+  color:#fff;
 }
 
-.learning-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+
+/* ============================================================
+   LEARNING LIST
+   ============================================================ */
+
+.learning-list{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
 }
 
-.learning-card {
-  position: relative;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 16px;
-  cursor: pointer;
+.learning-card{
+  position:relative;
+  background:var(--bg-card);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:16px;
+  cursor:pointer;
   transition:
-    border-color 0.15s,
-    transform 0.1s;
+    border-color .15s,
+    transform .1s,
+    background .15s;
 }
 
-.learning-card:hover {
-  border-color: var(--accent);
+.learning-card:hover{
+  border-color:var(--accent);
 }
 
-.learning-card:active {
-  transform: scale(0.99);
+.learning-card:active{
+  transform:scale(.99);
 }
 
-.learning-card-top {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
+.learning-card-top{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
 }
 
-.learning-card h3 {
-  font-size: 15px;
-  font-weight: 650;
-  margin-bottom: 5px;
+.learning-card h3{
+  font-size:15px;
+  font-weight:650;
+  margin:0 0 5px;
 }
 
-.learning-card-subtitle {
-  color: var(--text-muted);
-  font-size: 12px;
-  line-height: 1.5;
+.learning-card-subtitle{
+  color:var(--text-muted);
+  font-size:12px;
+  line-height:1.5;
 }
 
-.learning-card-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 7px 14px;
-  margin-top: 13px;
-  color: var(--text-muted);
-  font-size: 11px;
+.learning-card-meta{
+  display:flex;
+  flex-wrap:wrap;
+  gap:7px 14px;
+  margin-top:13px;
+  color:var(--text-muted);
+  font-size:11px;
 }
 
-.learning-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 4px 8px;
-  border-radius: 20px;
-  background: rgba(91, 140, 255, 0.13);
-  color: var(--accent-hover);
-  font-size: 11px;
-  white-space: nowrap;
-  flex-shrink: 0;
+.learning-badge{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:4px 8px;
+  border-radius:20px;
+  background:rgba(91,140,255,.13);
+  color:var(--accent-hover);
+  font-size:11px;
+  white-space:nowrap;
+  flex-shrink:0;
 }
 
-.learning-badge.verified {
-  background: rgba(34, 197, 94, 0.14);
-  color: var(--online);
+.learning-badge.verified{
+  background:rgba(34,197,94,.14);
+  color:var(--online);
 }
 
-.learning-badge.candidate {
-  background: rgba(234, 179, 8, 0.14);
-  color: #eab308;
+.learning-badge.candidate{
+  background:rgba(234,179,8,.14);
+  color:#eab308;
 }
 
-.learning-progress {
-  width: 100%;
-  height: 5px;
-  margin-top: 12px;
-  overflow: hidden;
-  background: var(--bg-elevated);
-  border-radius: 10px;
+
+/* ============================================================
+   LEARNING PROGRESS
+   ============================================================ */
+
+.learning-progress{
+  width:100%;
+  height:5px;
+  margin-top:12px;
+  overflow:hidden;
+  background:var(--bg-elevated);
+  border-radius:10px;
 }
 
-.learning-progress-fill {
-  height: 100%;
-  min-width: 0;
-  background: var(--accent);
-  border-radius: inherit;
-  transition: width 0.25s ease;
+.learning-progress-fill{
+  height:100%;
+  min-width:0;
+  background:var(--accent);
+  border-radius:inherit;
+  transition:width .25s ease;
 }
 
-.game-learning-card {
-  display: flex;
-  gap: 14px;
+
+/* ============================================================
+   GAME LEARNING
+   ============================================================ */
+
+.game-learning-card{
+  display:flex;
+  gap:14px;
 }
 
 .learning-game-icon,
-.learning-game-icon-placeholder {
-  width: 58px;
-  height: 58px;
-  border-radius: 12px;
-  object-fit: cover;
-  flex-shrink: 0;
+.learning-game-icon-placeholder{
+  width:58px;
+  height:58px;
+  border-radius:12px;
+  object-fit:cover;
+  flex-shrink:0;
 }
 
-.learning-game-icon-placeholder {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--bg-elevated);
-  font-size: 25px;
+.learning-game-icon-placeholder{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:var(--bg-elevated);
+  font-size:25px;
 }
 
-.learning-game-info {
-  flex: 1;
-  min-width: 0;
+.learning-game-info{
+  flex:1;
+  min-width:0;
 }
 
-.learning-detail-title {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 20px;
+
+/* ============================================================
+   LEARNING DETAIL
+   ============================================================ */
+
+.learning-detail-title{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  margin-bottom:20px;
 }
 
-.learning-detail-title > span {
-  width: 44px;
-  height: 44px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--bg-elevated);
-  border-radius: 12px;
-  font-size: 22px;
+.learning-detail-title > span{
+  width:44px;
+  height:44px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:var(--bg-elevated);
+  border-radius:12px;
+  font-size:22px;
 }
 
-.learning-detail-title h2 {
-  font-size: 19px;
-  margin-bottom: 4px;
+.learning-detail-title h2{
+  font-size:19px;
+  margin:0 0 4px;
 }
 
-.learning-detail-title p {
-  color: var(--text-muted);
-  font-size: 12px;
+.learning-detail-title p{
+  color:var(--text-muted);
+  font-size:12px;
+  margin:0;
 }
 
-.learning-detail-section {
-  padding: 14px 0;
-  border-top: 1px solid var(--border);
+.learning-detail-section{
+  padding:14px 0;
+  border-top:1px solid var(--border);
 }
 
-.learning-detail-section h3 {
-  font-size: 13px;
-  margin-bottom: 8px;
+.learning-detail-section h3{
+  font-size:13px;
+  margin:0 0 8px;
 }
 
-.learning-detail-section p {
-  color: var(--text-muted);
-  font-size: 13px;
-  line-height: 1.6;
-  margin-bottom: 5px;
+.learning-detail-section p{
+  color:var(--text-muted);
+  font-size:13px;
+  line-height:1.6;
+  margin:0 0 5px;
 }
 
-.learning-detail-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
-  margin: 10px 0;
+.learning-detail-grid{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:10px;
+  margin:10px 0;
 }
 
-.learning-detail-grid > div {
-  padding: 12px;
-  background: var(--bg-elevated);
-  border-radius: 10px;
+.learning-detail-grid > div{
+  padding:12px;
+  background:var(--bg-elevated);
+  border-radius:10px;
 }
 
-.learning-detail-grid span {
-  display: block;
-  color: var(--text-muted);
-  font-size: 11px;
-  margin-bottom: 5px;
+.learning-detail-grid span{
+  display:block;
+  color:var(--text-muted);
+  font-size:11px;
+  margin-bottom:5px;
 }
 
-.learning-detail-grid strong {
-  display: block;
-  font-size: 14px;
-  word-break: break-word;
+.learning-detail-grid strong{
+  display:block;
+  font-size:14px;
+  word-break:break-word;
 }
 
-.learning-detail-thumbnail {
-  width: 100%;
-  max-height: 240px;
-  object-fit: cover;
-  border-radius: 12px;
-  margin-bottom: 16px;
+.learning-detail-thumbnail{
+  width:100%;
+  max-height:240px;
+  object-fit:cover;
+  border-radius:12px;
+  margin-bottom:16px;
 }
+
+
+/* ============================================================
+   SKILLS
+   ============================================================ */
+
+.skill-card{
+  cursor:pointer;
+}
+
+.skill-card:hover{
+  border-color:#3b4b69;
+}
+
+.skill-icon{
+  width:38px;
+  height:38px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  flex-shrink:0;
+  background:var(--bg-elevated);
+  border-radius:10px;
+  font-size:20px;
+}
+
+.skill-detail-card{
+  max-width:760px;
+}
+
+.skill-detail-body{
+  display:grid;
+  gap:10px;
+}
+
+.skill-instructions{
+  margin:0;
+  padding:13px;
+  background:var(--bg-elevated);
+  border:1px solid var(--border);
+  border-radius:10px;
+  color:var(--text);
+  white-space:pre-wrap;
+  word-break:break-word;
+  font:
+    12px/1.6
+    ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Monaco,
+    Consolas,
+    monospace;
+  max-height:360px;
+  overflow:auto;
+}
+
+.skill-card .learning-card-description{
+  margin-top:10px;
+}
+
+.skill-card .chips{
+  margin-top:10px;
+}
+
+
+/* ============================================================
+   GENERIC BUTTON HELPERS
+   ============================================================ */
+
+.btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:7px;
+  padding:9px 13px;
+  border:1px solid var(--line);
+  border-radius:10px;
+  background:var(--panel2);
+  color:var(--text);
+  cursor:pointer;
+  transition:
+    background .15s ease,
+    border-color .15s ease,
+    transform .1s ease;
+}
+
+.btn:hover{
+  border-color:#3b4b69;
+  background:#172033;
+}
+
+.btn:active{
+  transform:scale(.98);
+}
+
+.btn-primary{
+  background:var(--accent);
+  border-color:var(--accent);
+  color:#07101f;
+  font-weight:800;
+}
+
+.btn-primary:hover{
+  background:var(--accent-hover);
+  border-color:var(--accent-hover);
+}
+
+
+/* ============================================================
+   SCROLLBARS
+   ============================================================ */
+
+*{
+  scrollbar-width:thin;
+  scrollbar-color:#27344b transparent;
+}
+
+*::-webkit-scrollbar{
+  width:7px;
+  height:7px;
+}
+
+*::-webkit-scrollbar-track{
+  background:transparent;
+}
+
+*::-webkit-scrollbar-thumb{
+  background:#27344b;
+  border-radius:99px;
+}
+
+*::-webkit-scrollbar-thumb:hover{
+  background:#354563;
+}
+
+
+/* ============================================================
+   MOBILE
+   ============================================================ */
+
+@media(max-width:1000px){
+
+  .stats{
+    grid-template-columns:repeat(3,1fr);
+  }
+
+  .grid3{
+    grid-template-columns:1fr 1fr;
+  }
+
+}
+
 
 /* ============================================================
    LEARNING MOBILE
    ============================================================ */
 
-@media (max-width: 700px) {
-  .header-right {
-    display: flex;
-    gap: 6px;
+@media(max-width:700px){
+
+  .topbar{
+    align-items:flex-start;
   }
 
-  .header-right .btn {
-    padding: 7px 9px;
-    font-size: 11px;
+  .sub{
+    display:block;
+    margin:0;
   }
 
-  .learning-header {
-    align-items: flex-start;
+  .top-actions span{
+    display:none;
   }
 
-  .learning-header h1 {
-    font-size: 19px;
+  .tabs{
+    top:88px;
+    padding:8px 12px;
   }
 
-  .learning-stats {
-    grid-template-columns: repeat(2, 1fr);
+  main{
+    padding:12px;
   }
 
-  .learning-stat-card {
-    padding: 12px;
+  .stats,
+  .grid,
+  .grid3{
+    grid-template-columns:1fr;
   }
 
-  .learning-stat-icon {
-    width: 34px;
-    height: 34px;
-    font-size: 17px;
+  .stat .n{
+    font-size:24px;
   }
 
-  .learning-stat-value {
-    font-size: 19px;
+  .hero-game{
+    grid-template-columns:1fr;
   }
 
-  .learning-card-top {
-    gap: 8px;
+  .hero-game img{
+    width:100%;
+    height:170px;
   }
 
-  .learning-card-meta {
-    gap: 6px 10px;
+  .kv{
+    grid-template-columns:120px 1fr;
   }
 
-  .game-learning-card {
-    gap: 10px;
+  .modal-card{
+    padding:18px 13px;
+  }
+
+  .header-right{
+    display:flex;
+    gap:6px;
+  }
+
+  .header-right .btn{
+    padding:7px 9px;
+    font-size:11px;
+  }
+
+  .learning-header{
+    align-items:flex-start;
+  }
+
+  .learning-header h1{
+    font-size:19px;
+  }
+
+  .learning-stats{
+    grid-template-columns:repeat(2,1fr);
+  }
+
+  .learning-stat-card{
+    padding:12px;
+  }
+
+  .learning-stat-icon{
+    width:34px;
+    height:34px;
+    font-size:17px;
+  }
+
+  .learning-stat-value{
+    font-size:19px;
+  }
+
+  .learning-card-top{
+    gap:8px;
+  }
+
+  .learning-card-meta{
+    gap:6px 10px;
+  }
+
+  .game-learning-card{
+    gap:10px;
   }
 
   .learning-game-icon,
-  .learning-game-icon-placeholder {
-    width: 48px;
-    height: 48px;
+  .learning-game-icon-placeholder{
+    width:48px;
+    height:48px;
   }
+
+  .skill-detail-card{
+    width:calc(100% - 20px);
+  }
+
+  .skill-icon{
+    width:34px;
+    height:34px;
+    font-size:18px;
+  }
+
 }
 
-@media (max-width: 430px) {
-  .learning-header {
-    flex-direction: column;
+
+/* ============================================================
+   SMALL PHONES
+   ============================================================ */
+
+@media(max-width:430px){
+
+  .screen{
+    padding:12px;
   }
 
-  .learning-header .btn {
-    width: 100%;
+  .login-card{
+    padding:25px 18px;
+    border-radius:20px;
   }
 
-  .learning-stats {
-    gap: 7px;
+  .brand-mark{
+    font-size:44px;
   }
 
-  .learning-stat-card {
-    padding: 10px;
-    gap: 8px;
+  .topbar{
+    padding:12px;
   }
 
-  .learning-stat-label {
-    font-size: 10px;
+  .tabs{
+    top:82px;
   }
 
-  .learning-card {
-    padding: 13px;
+  main{
+    padding:10px;
   }
 
-  .learning-detail-grid {
-    grid-template-columns: 1fr 1fr;
+  .learning-header{
+    flex-direction:column;
   }
+
+  .learning-header .btn{
+    width:100%;
+  }
+
+  .learning-stats{
+    gap:7px;
+  }
+
+  .learning-stat-card{
+    padding:10px;
+    gap:8px;
+  }
+
+  .learning-stat-label{
+    font-size:10px;
+  }
+
+  .learning-card{
+    padding:13px;
+  }
+
+  .learning-detail-grid{
+    grid-template-columns:1fr 1fr;
+  }
+
+}
+
+
+/* ============================================================
+   VERY SMALL PHONES
+   ============================================================ */
+
+@media(max-width:360px){
+
+  .learning-stats{
+    grid-template-columns:1fr;
+  }
+
+  .kv{
+    grid-template-columns:100px 1fr;
+    font-size:12px;
+  }
+
+  .learning-detail-grid{
+    grid-template-columns:1fr;
+  }
+
+  .top-actions{
+    gap:4px;
+  }
+
+  .top-actions button{
+    padding:9px 10px;
+  }
+
 }

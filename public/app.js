@@ -1,74 +1,99 @@
 (function () {
-  const loginScreen = document.getElementById('login-screen');
-  const dashboard = document.getElementById('dashboard');
-  const loginForm = document.getElementById('login-form');
-  const passwordInput = document.getElementById('password');
-  const loginBtn = document.getElementById('login-btn');
-  const loginError = document.getElementById('login-error');
-  const logoutBtn = document.getElementById('logout-btn');
+  'use strict';
 
-  const searchInput = document.getElementById('search-input');
+  // ============================================================
+  // DOM
+  // ============================================================
+
+  const $ = (id) => document.getElementById(id);
+
+  const loginScreen = $('login-screen');
+  const dashboard = $('dashboard');
+  const loginForm = $('login-form');
+  const passwordInput = $('password');
+  const loginBtn = $('login-btn');
+  const loginError = $('login-error');
+  const logoutBtn = $('logout-btn');
+
+  const searchInput = $('search-input');
   const filterBtns = document.querySelectorAll('.filter-btn');
-  const brainList = document.getElementById('brain-list');
+  const brainList = $('brain-list');
 
-  const loadingState = document.getElementById('loading-state');
-  const emptyState = document.getElementById('empty-state');
-  const errorState = document.getElementById('error-state');
-  const errorDetail = document.getElementById('error-detail');
-  const retryBtn = document.getElementById('retry-btn');
+  const loadingState = $('loading-state');
+  const emptyState = $('empty-state');
+  const errorState = $('error-state');
+  const errorDetail = $('error-detail');
+  const retryBtn = $('retry-btn');
 
-  const detailModal = document.getElementById('detail-modal');
-  const detailBody = document.getElementById('detail-body');
-  const modalClose = document.getElementById('modal-close');
-  const modalBackdrop = detailModal.querySelector('.modal-backdrop');
+  const detailModal = $('detail-modal');
+  const detailBody = $('detail-body');
+  const modalClose = $('modal-close');
 
-  const dashboardView = document.getElementById('dashboard-view');
-  const learningView = document.getElementById('learning-view');
+  const dashboardView = $('dashboard-view');
+  const learningView = $('learning-view');
 
-  const learningBtn = document.getElementById('learning-btn');
-  const backDashboardBtn = document.getElementById('back-dashboard-btn');
+  const learningBtn = $('learning-btn');
+  const skillsBtn = $('skills-btn');
+  const skillsView = $('skills-view');
+  const backDashboardBtn = $('back-dashboard-btn');
 
-  const learningRefreshBtn =
-    document.getElementById('learning-refresh-btn');
-
-  const learningSearch =
-    document.getElementById('learning-search');
-
+  const learningRefreshBtn = $('learning-refresh-btn');
+  const learningSearch = $('learning-search');
   const learningTabs =
-    document.querySelectorAll('.learning-tab');
+    document.querySelectorAll('[data-learning-tab]');
 
-  const learningLoading =
-    document.getElementById('learning-loading');
-
-  const learningError =
-    document.getElementById('learning-error');
-
-  const learningErrorDetail =
-    document.getElementById('learning-error-detail');
-
-  const learningRetryBtn =
-    document.getElementById('learning-retry-btn');
-
-  const learningEmpty =
-    document.getElementById('learning-empty');
+  const learningLoading = $('learning-loading');
+  const learningError = $('learning-error');
+  const learningErrorDetail = $('learning-error-detail');
+  const learningRetryBtn = $('learning-retry-btn');
+  const learningEmpty = $('learning-empty');
 
   const learningKnowledgeList =
-    document.getElementById('learning-knowledge-list');
+    $('learning-knowledge-list');
 
   const learningGamesList =
-    document.getElementById('learning-games-list');
+    $('learning-games-list');
 
   const learningDetailModal =
-    document.getElementById('learning-detail-modal');
+    $('learning-detail-modal');
 
   const learningDetailBody =
-    document.getElementById('learning-detail-body');
+    $('learning-detail-body');
 
   const learningDetailClose =
-    document.getElementById('learning-detail-close');
+    $('learning-detail-close');
 
-  const learningDetailBackdrop =
-    learningDetailModal.querySelector('.learning-modal-backdrop');
+  const skillsRefreshBtn =
+    $('skills-refresh-btn');
+
+  const skillsSearch =
+    $('skills-search');
+
+  const skillsTabs =
+    document.querySelectorAll('[data-skill-tab]');
+
+  const skillsLoading =
+    $('skills-loading');
+
+  const skillsError =
+    $('skills-error');
+
+  const skillsErrorDetail =
+    $('skills-error-detail');
+
+  const skillsRetryBtn =
+    $('skills-retry-btn');
+
+  const skillsEmpty =
+    $('skills-empty');
+
+  const skillsList =
+    $('skills-list');
+
+
+  // ============================================================
+  // STATE
+  // ============================================================
 
   let currentStatus = '';
   let pollTimer = null;
@@ -76,13 +101,100 @@
 
   let currentView = 'dashboard';
 
+  let currentLearningTab = 'knowledge';
+
+  let currentSkillTab = 'all';
+
   let learningData = {
     totals: {},
     knowledge: [],
     games: []
   };
 
-  let currentLearningTab = 'knowledge';
+  let skillsData = [];
+
+
+  // ============================================================
+  // SAFETY
+  // ============================================================
+
+  function exists(element) {
+    return !!element;
+  }
+
+  function safeClass(element, method, className) {
+    if (!element) return;
+
+    if (method === 'add') {
+      element.classList.add(className);
+    }
+
+    if (method === 'remove') {
+      element.classList.remove(className);
+    }
+  }
+
+  function setText(element, value) {
+    if (element) {
+      element.textContent =
+        value == null ? '' : String(value);
+    }
+  }
+
+
+  // ============================================================
+  // HTML ESCAPE
+  // ============================================================
+
+  function escapeHtml(value) {
+    if (value == null) return '';
+
+    return String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+
+  // ============================================================
+  // FETCH JSON
+  // ============================================================
+
+  async function fetchJSON(
+    url,
+    options = {}
+  ) {
+    const response = await fetch(url, {
+      credentials: 'include',
+      ...options
+    });
+
+    let data = {};
+
+    try {
+      data = await response.json();
+    } catch {
+      data = {};
+    }
+
+    if (response.status === 401) {
+      showLogin();
+      throw new Error('UNAUTHORIZED');
+    }
+
+    if (!response.ok) {
+      throw new Error(
+        data.error ||
+        data.message ||
+        `Server error ${response.status}`
+      );
+    }
+
+    return data;
+  }
+
 
   // ============================================================
   // AUTH
@@ -90,11 +202,9 @@
 
   async function checkAuth() {
     try {
-      const res = await fetch('/api/auth/check', {
-        credentials: 'include'
-      });
-
-      const data = await res.json();
+      const data = await fetchJSON(
+        '/api/auth/check'
+      );
 
       return !!data.authenticated;
     } catch {
@@ -102,103 +212,190 @@
     }
   }
 
+
   function showLogin() {
-    loginScreen.classList.remove('hidden');
-    dashboard.classList.add('hidden');
+    safeClass(
+      loginScreen,
+      'remove',
+      'hidden'
+    );
+
+    safeClass(
+      dashboard,
+      'add',
+      'hidden'
+    );
 
     stopPolling();
 
     currentView = 'dashboard';
+
+    closeDetailModal();
+    closeLearningDetail();
+
+    if (passwordInput) {
+      passwordInput.focus();
+    }
   }
 
+
   function showDashboard() {
-    loginScreen.classList.add('hidden');
-    dashboard.classList.remove('hidden');
+    safeClass(
+      loginScreen,
+      'add',
+      'hidden'
+    );
+
+    safeClass(
+      dashboard,
+      'remove',
+      'hidden'
+    );
 
     showDashboardView();
 
     loadBrains();
-    startPolling();
   }
 
-  async function init() {
-    const authed = await checkAuth();
 
-    if (authed) {
+  async function init() {
+    if (!loginScreen || !dashboard) {
+      console.error(
+        '[AI Brain Registry] Missing root DOM elements.'
+      );
+      return;
+    }
+
+    const authenticated =
+      await checkAuth();
+
+    if (authenticated) {
       showDashboard();
     } else {
       showLogin();
     }
   }
 
-  loginForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
 
-    const password = passwordInput.value;
+  if (loginForm) {
+    loginForm.addEventListener(
+      'submit',
+      async (event) => {
+        event.preventDefault();
 
-    if (!password) return;
+        const password =
+          passwordInput?.value || '';
 
-    loginBtn.disabled = true;
+        if (!password) {
+          return;
+        }
 
-    loginBtn
-      .querySelector('.btn-text')
-      .classList.add('hidden');
+        loginBtn.disabled = true;
 
-    loginBtn
-      .querySelector('.btn-loading')
-      .classList.remove('hidden');
+        const text =
+          loginBtn.querySelector(
+            '.btn-text'
+          );
 
-    loginError.classList.add('hidden');
+        const loading =
+          loginBtn.querySelector(
+            '.btn-loading'
+          );
 
-    try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        credentials: 'include',
-        body: JSON.stringify({ password })
-      });
-
-      const data = await res.json().catch(() => ({}));
-
-      if (!res.ok) {
-        throw new Error(
-          data.error || 'Đăng nhập thất bại'
+        safeClass(
+          text,
+          'add',
+          'hidden'
         );
+
+        safeClass(
+          loading,
+          'remove',
+          'hidden'
+        );
+
+        safeClass(
+          loginError,
+          'add',
+          'hidden'
+        );
+
+        try {
+          await fetchJSON(
+            '/api/auth/login',
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type':
+                  'application/json'
+              },
+              body: JSON.stringify({
+                password
+              })
+            }
+          );
+
+          passwordInput.value = '';
+
+          showDashboard();
+
+        } catch (error) {
+          if (
+            error.message !==
+            'UNAUTHORIZED'
+          ) {
+            setText(
+              loginError,
+              error.message ||
+                'Sai mật khẩu hoặc lỗi mạng'
+            );
+
+            safeClass(
+              loginError,
+              'remove',
+              'hidden'
+            );
+          }
+
+        } finally {
+          loginBtn.disabled = false;
+
+          safeClass(
+            text,
+            'remove',
+            'hidden'
+          );
+
+          safeClass(
+            loading,
+            'add',
+            'hidden'
+          );
+        }
       }
+    );
+  }
 
-      passwordInput.value = '';
 
-      showDashboard();
-    } catch (err) {
-      loginError.textContent =
-        err.message || 'Sai mật khẩu hoặc lỗi mạng';
+  if (logoutBtn) {
+    logoutBtn.addEventListener(
+      'click',
+      async () => {
+        try {
+          await fetch(
+            '/api/auth/logout',
+            {
+              method: 'POST',
+              credentials: 'include'
+            }
+          );
+        } catch {}
 
-      loginError.classList.remove('hidden');
-    } finally {
-      loginBtn.disabled = false;
+        showLogin();
+      }
+    );
+  }
 
-      loginBtn
-        .querySelector('.btn-text')
-        .classList.remove('hidden');
-
-      loginBtn
-        .querySelector('.btn-loading')
-        .classList.add('hidden');
-    }
-  });
-
-  logoutBtn.addEventListener('click', async () => {
-    try {
-      await fetch('/api/auth/logout', {
-        method: 'POST',
-        credentials: 'include'
-      });
-    } catch {}
-
-    showLogin();
-  });
 
   // ============================================================
   // VIEW NAVIGATION
@@ -207,46 +404,186 @@
   function showDashboardView() {
     currentView = 'dashboard';
 
-    dashboardView.classList.remove('hidden');
-    learningView.classList.add('hidden');
+    safeClass(
+      dashboardView,
+      'remove',
+      'hidden'
+    );
 
-    learningBtn.classList.remove('hidden');
-    backDashboardBtn.classList.add('hidden');
+    safeClass(
+      learningView,
+      'add',
+      'hidden'
+    );
+
+    safeClass(
+      skillsView,
+      'add',
+      'hidden'
+    );
+
+    safeClass(
+      learningBtn,
+      'remove',
+      'hidden'
+    );
+
+    safeClass(
+      skillsBtn,
+      'remove',
+      'hidden'
+    );
+
+    safeClass(
+      backDashboardBtn,
+      'add',
+      'hidden'
+    );
 
     startPolling();
   }
 
+
   async function showLearningView() {
     currentView = 'learning';
 
-    dashboardView.classList.add('hidden');
-    learningView.classList.remove('hidden');
+    safeClass(
+      dashboardView,
+      'add',
+      'hidden'
+    );
 
-    learningBtn.classList.add('hidden');
-    backDashboardBtn.classList.remove('hidden');
+    safeClass(
+      learningView,
+      'remove',
+      'hidden'
+    );
+
+    safeClass(
+      skillsView,
+      'add',
+      'hidden'
+    );
+
+    safeClass(
+      learningBtn,
+      'add',
+      'hidden'
+    );
+
+    safeClass(
+      skillsBtn,
+      'remove',
+      'hidden'
+    );
+
+    safeClass(
+      backDashboardBtn,
+      'remove',
+      'hidden'
+    );
 
     stopPolling();
 
     await loadLearning();
   }
 
-  learningBtn.addEventListener('click', showLearningView);
 
-  backDashboardBtn.addEventListener(
-    'click',
-    showDashboardView
-  );
+  function showSkillsView() {
+    currentView = 'skills';
+
+    safeClass(
+      dashboardView,
+      'add',
+      'hidden'
+    );
+
+    safeClass(
+      learningView,
+      'add',
+      'hidden'
+    );
+
+    safeClass(
+      skillsView,
+      'remove',
+      'hidden'
+    );
+
+    safeClass(
+      learningBtn,
+      'remove',
+      'hidden'
+    );
+
+    safeClass(
+      skillsBtn,
+      'add',
+      'hidden'
+    );
+
+    safeClass(
+      backDashboardBtn,
+      'remove',
+      'hidden'
+    );
+
+    stopPolling();
+
+    loadSkills();
+  }
+
+
+  if (learningBtn) {
+    learningBtn.addEventListener(
+      'click',
+      showLearningView
+    );
+  }
+
+
+  if (skillsBtn) {
+    skillsBtn.addEventListener(
+      'click',
+      showSkillsView
+    );
+  }
+
+
+  if (backDashboardBtn) {
+    backDashboardBtn.addEventListener(
+      'click',
+      showDashboardView
+    );
+  }
+
 
   // ============================================================
-  // NORMAL DASHBOARD DATA
+  // NORMAL DASHBOARD
   // ============================================================
 
-  function formatTime(ts) {
-    if (!ts) return '—';
+  function formatTime(timestamp) {
+    if (!timestamp) {
+      return '—';
+    }
 
-    const d = new Date(ts);
-    const now = Date.now();
-    const diff = now - ts;
+    const numeric =
+      typeof timestamp === 'number'
+        ? timestamp
+        : Date.parse(timestamp);
+
+    if (!Number.isFinite(numeric)) {
+      return '—';
+    }
+
+    const date =
+      new Date(numeric);
+
+    const now =
+      Date.now();
+
+    const diff =
+      now - numeric;
 
     if (diff < 60000) {
       return 'Vừa xong';
@@ -254,101 +591,153 @@
 
     if (diff < 3600000) {
       return (
-        Math.floor(diff / 60000) +
-        ' phút trước'
+        Math.floor(
+          diff / 60000
+        ) + ' phút trước'
       );
     }
 
     if (diff < 86400000) {
       return (
-        Math.floor(diff / 3600000) +
-        ' giờ trước'
+        Math.floor(
+          diff / 3600000
+        ) + ' giờ trước'
       );
     }
 
-    return d.toLocaleString('vi-VN', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    return date.toLocaleString(
+      'vi-VN',
+      {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      }
+    );
   }
 
-  function showState(state) {
-    loadingState.classList.add('hidden');
-    emptyState.classList.add('hidden');
-    errorState.classList.add('hidden');
-    brainList.classList.add('hidden');
+
+  function showBrainState(state) {
+    safeClass(
+      loadingState,
+      'add',
+      'hidden'
+    );
+
+    safeClass(
+      emptyState,
+      'add',
+      'hidden'
+    );
+
+    safeClass(
+      errorState,
+      'add',
+      'hidden'
+    );
+
+    safeClass(
+      brainList,
+      'add',
+      'hidden'
+    );
 
     if (state === 'loading') {
-      loadingState.classList.remove('hidden');
-    } else if (state === 'empty') {
-      emptyState.classList.remove('hidden');
-    } else if (state === 'error') {
-      errorState.classList.remove('hidden');
-    } else if (state === 'list') {
-      brainList.classList.remove('hidden');
+      safeClass(
+        loadingState,
+        'remove',
+        'hidden'
+      );
+    }
+
+    if (state === 'empty') {
+      safeClass(
+        emptyState,
+        'remove',
+        'hidden'
+      );
+    }
+
+    if (state === 'error') {
+      safeClass(
+        errorState,
+        'remove',
+        'hidden'
+      );
+    }
+
+    if (state === 'list') {
+      safeClass(
+        brainList,
+        'remove',
+        'hidden'
+      );
     }
   }
 
+
   async function loadBrains() {
-    if (currentView !== 'dashboard') {
+    if (
+      currentView !==
+      'dashboard'
+    ) {
       return;
     }
 
-    showState('loading');
+    showBrainState('loading');
 
-    const q = searchInput.value.trim();
+    const query =
+      searchInput?.value.trim() ||
+      '';
 
-    const params = new URLSearchParams();
+    const params =
+      new URLSearchParams();
 
-    if (q) {
-      params.set('q', q);
+    if (query) {
+      params.set(
+        'q',
+        query
+      );
     }
 
     if (currentStatus) {
-      params.set('status', currentStatus);
+      params.set(
+        'status',
+        currentStatus
+      );
     }
 
     try {
-      const res = await fetch(
-        '/api/brains?' + params.toString(),
-        {
-          credentials: 'include'
-        }
+      const data =
+        await fetchJSON(
+          '/api/brains?' +
+          params.toString()
+        );
+
+      setText(
+        $('stat-total'),
+        data.total ?? 0
       );
 
-      if (res.status === 401) {
-        showLogin();
-        return;
-      }
+      setText(
+        $('stat-online'),
+        data.online ?? 0
+      );
 
-      if (!res.ok) {
-        throw new Error(
-          'Server error ' + res.status
-        );
-      }
-
-      const data = await res.json();
-
-      document.getElementById(
-        'stat-total'
-      ).textContent = data.total ?? 0;
-
-      document.getElementById(
-        'stat-online'
-      ).textContent = data.online ?? 0;
-
-      document.getElementById(
-        'stat-offline'
-      ).textContent = data.offline ?? 0;
+      setText(
+        $('stat-offline'),
+        data.offline ?? 0
+      );
 
       if (
-        !data.brains ||
+        Array.isArray(
+          data.brains
+        ) === false ||
         data.brains.length === 0
       ) {
-        showState('empty');
+        brainList.innerHTML = '';
+        showBrainState('empty');
         return;
       }
 
@@ -357,128 +746,163 @@
           .map(renderBrainCard)
           .join('');
 
-      showState('list');
+      showBrainState('list');
 
       brainList
-        .querySelectorAll('.brain-card')
-        .forEach((card) => {
-          card.addEventListener(
-            'click',
-            () => openDetail(
-              card.dataset.id
-            )
-          );
-        });
+        .querySelectorAll(
+          '.brain-card'
+        )
+        .forEach(
+          (card) => {
+            card.addEventListener(
+              'click',
+              () => {
+                openDetail(
+                  card.dataset.id
+                );
+              }
+            );
+          }
+        );
 
-    } catch (err) {
-      errorDetail.textContent =
-        err.message;
+    } catch (error) {
+      if (
+        error.message ===
+        'UNAUTHORIZED'
+      ) {
+        return;
+      }
 
-      showState('error');
+      setText(
+        errorDetail,
+        error.message
+      );
+
+      showBrainState('error');
     }
   }
 
-  function renderBrainCard(b) {
+
+  function renderBrainCard(brain) {
     const name =
-      b.displayName ||
-      b.originalName ||
-      b.userId ||
+      brain.displayName ||
+      brain.originalName ||
+      brain.userId ||
       'Unknown';
 
+    const online =
+      brain.status ===
+      'online';
+
     const statusClass =
-      b.status === 'online'
+      online
         ? 'online'
         : 'offline';
 
     const statusText =
-      b.status === 'online'
+      online
         ? 'Online'
         : 'Offline';
 
+    const brainId =
+      brain.brainId || '';
+
+    const shortId =
+      brainId.length > 12
+        ? brainId.slice(0, 12) +
+          '…'
+        : brainId;
+
     return `
-      <div
+      <article
         class="brain-card"
-        data-id="${escapeHtml(b.brainId)}"
+        data-id="${escapeHtml(brainId)}"
       >
+
         <div class="brain-top">
+
           <div class="brain-name">
             ${escapeHtml(name)}
           </div>
 
-          <div class="brain-status ${statusClass}">
+          <div
+            class="brain-status ${statusClass}"
+          >
             <span class="dot"></span>
             ${statusText}
           </div>
+
         </div>
 
         <div class="brain-meta">
+
           <span>
             ID:
-            ${escapeHtml(
-              (b.brainId || '').slice(0, 12)
-            )}…
+            ${escapeHtml(shortId)}
           </span>
 
           <span>
             User:
-            ${escapeHtml(b.userId || '—')}
-          </span>
-
-          <span>
-            v${escapeHtml(
-              b.brainVersion || '?'
+            ${escapeHtml(
+              brain.userId ||
+              '—'
             )}
           </span>
 
           <span>
-            ${formatTime(b.lastSeen)}
+            v${escapeHtml(
+              brain.brainVersion ||
+              '?'
+            )}
           </span>
+
+          <span>
+            ${formatTime(
+              brain.lastSeen
+            )}
+          </span>
+
         </div>
-      </div>
+
+      </article>
     `;
   }
 
-  function escapeHtml(str) {
-    if (str == null) return '';
 
-    return String(str)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
-  }
+  // ============================================================
+  // BRAIN DETAIL
+  // ============================================================
 
   async function openDetail(brainId) {
+    if (!brainId) {
+      return;
+    }
+
     try {
-      const res = await fetch(
-        '/api/brains/' +
-        encodeURIComponent(brainId),
-        {
-          credentials: 'include'
-        }
-      );
+      const brain =
+        await fetchJSON(
+          '/api/brains/' +
+          encodeURIComponent(
+            brainId
+          )
+        );
 
-      if (res.status === 401) {
-        showLogin();
-        return;
-      }
-
-      if (!res.ok) {
-        throw new Error('Not found');
-      }
-
-      const b = await res.json();
+      const skills =
+        Array.isArray(
+          brain.skills
+        )
+          ? brain.skills
+          : [];
 
       const skillsHtml =
-        b.skills &&
-        b.skills.length
+        skills.length
           ? `
-            <div class="skills-list">
-              ${b.skills
+            <div class="chips">
+              ${skills
                 .map(
-                  s =>
-                    `<span class="skill-tag">
-                      ${escapeHtml(s)}
+                  (skill) =>
+                    `<span class="chip">
+                      ${escapeHtml(skill)}
                     </span>`
                 )
                 .join('')}
@@ -486,26 +910,47 @@
           `
           : '—';
 
+      const online =
+        brain.status ===
+        'online';
+
       detailBody.innerHTML = `
-        <h3
-          style="
-            margin-bottom:16px;
-            font-size:18px;
-          "
-        >
-          ${escapeHtml(
-            b.displayName ||
-            b.originalName ||
-            'Brain'
-          )}
-        </h3>
+        <div class="detail-head">
+
+          <h2>
+            ${escapeHtml(
+              brain.displayName ||
+              brain.originalName ||
+              'Brain'
+            )}
+          </h2>
+
+          <span
+            class="brain-status ${
+              online
+                ? 'online'
+                : 'offline'
+            }"
+          >
+            <span class="dot"></span>
+            ${
+              online
+                ? 'Online'
+                : 'Offline'
+            }
+          </span>
+
+        </div>
 
         <div class="detail-row">
           <span class="detail-label">
             Brain ID
           </span>
+
           <span class="detail-value">
-            ${escapeHtml(b.brainId)}
+            ${escapeHtml(
+              brain.brainId
+            )}
           </span>
         </div>
 
@@ -513,8 +958,11 @@
           <span class="detail-label">
             User ID
           </span>
+
           <span class="detail-value">
-            ${escapeHtml(b.userId)}
+            ${escapeHtml(
+              brain.userId
+            )}
           </span>
         </div>
 
@@ -522,9 +970,11 @@
           <span class="detail-label">
             Display Name
           </span>
+
           <span class="detail-value">
             ${escapeHtml(
-              b.displayName || '—'
+              brain.displayName ||
+              '—'
             )}
           </span>
         </div>
@@ -533,32 +983,12 @@
           <span class="detail-label">
             Original Name
           </span>
+
           <span class="detail-value">
             ${escapeHtml(
-              b.originalName || '—'
+              brain.originalName ||
+              '—'
             )}
-          </span>
-        </div>
-
-        <div class="detail-row">
-          <span class="detail-label">
-            Status
-          </span>
-          <span class="detail-value">
-            <span
-              class="brain-status ${
-                b.status === 'online'
-                  ? 'online'
-                  : 'offline'
-              }"
-            >
-              <span class="dot"></span>
-              ${
-                b.status === 'online'
-                  ? 'Online'
-                  : 'Offline'
-              }
-            </span>
           </span>
         </div>
 
@@ -566,9 +996,11 @@
           <span class="detail-label">
             Version
           </span>
+
           <span class="detail-value">
             ${escapeHtml(
-              b.brainVersion || '—'
+              brain.brainVersion ||
+              '—'
             )}
           </span>
         </div>
@@ -577,8 +1009,11 @@
           <span class="detail-label">
             Created
           </span>
+
           <span class="detail-value">
-            ${formatTime(b.createdAt)}
+            ${formatTime(
+              brain.createdAt
+            )}
           </span>
         </div>
 
@@ -586,8 +1021,11 @@
           <span class="detail-label">
             Last Seen
           </span>
+
           <span class="detail-value">
-            ${formatTime(b.lastSeen)}
+            ${formatTime(
+              brain.lastSeen
+            )}
           </span>
         </div>
 
@@ -595,76 +1033,149 @@
           <span class="detail-label">
             Skills
           </span>
+
           <span class="detail-value">
             ${skillsHtml}
           </span>
         </div>
       `;
 
-      detailModal.classList.remove('hidden');
+      openModal(detailModal);
 
-    } catch (err) {
+    } catch (error) {
+      if (
+        error.message ===
+        'UNAUTHORIZED'
+      ) {
+        return;
+      }
+
       alert(
         'Không tải được chi tiết: ' +
-        err.message
+        error.message
       );
     }
   }
 
-  function closeModal() {
-    detailModal.classList.add('hidden');
+
+  function openModal(modal) {
+    if (!modal) return;
+
+    modal.classList.remove(
+      'hidden'
+    );
+
+    document.body.classList.add(
+      'modal-open'
+    );
   }
 
-  modalClose.addEventListener(
-    'click',
-    closeModal
-  );
 
-  modalBackdrop.addEventListener(
-    'click',
-    closeModal
-  );
+  function closeModal(modal) {
+    if (!modal) return;
+
+    modal.classList.add(
+      'hidden'
+    );
+
+    if (
+      !document.querySelector(
+        '.modal:not(.hidden)'
+      )
+    ) {
+      document.body.classList.remove(
+        'modal-open'
+      );
+    }
+  }
+
+
+  function closeDetailModal() {
+    closeModal(
+      detailModal
+    );
+  }
+
+
+  if (modalClose) {
+    modalClose.addEventListener(
+      'click',
+      closeDetailModal
+    );
+  }
+
+
+  if (detailModal) {
+    const backdrop =
+      detailModal.querySelector(
+        '.modal-backdrop, .backdrop'
+      );
+
+    if (backdrop) {
+      backdrop.addEventListener(
+        'click',
+        closeDetailModal
+      );
+    }
+  }
+
 
   // ============================================================
   // SEARCH / FILTER
   // ============================================================
 
-  searchInput.addEventListener(
-    'input',
-    () => {
-      clearTimeout(searchDebounce);
-
-      searchDebounce =
-        setTimeout(
-          loadBrains,
-          300
+  if (searchInput) {
+    searchInput.addEventListener(
+      'input',
+      () => {
+        clearTimeout(
+          searchDebounce
         );
+
+        searchDebounce =
+          setTimeout(
+            loadBrains,
+            300
+          );
+      }
+    );
+  }
+
+
+  filterBtns.forEach(
+    (button) => {
+      button.addEventListener(
+        'click',
+        () => {
+          filterBtns.forEach(
+            (item) =>
+              item.classList.remove(
+                'active'
+              )
+          );
+
+          button.classList.add(
+            'active'
+          );
+
+          currentStatus =
+            button.dataset.status ||
+            '';
+
+          loadBrains();
+        }
+      );
     }
   );
 
-  filterBtns.forEach((btn) => {
-    btn.addEventListener(
+
+  if (retryBtn) {
+    retryBtn.addEventListener(
       'click',
-      () => {
-        filterBtns.forEach(
-          b =>
-            b.classList.remove('active')
-        );
-
-        btn.classList.add('active');
-
-        currentStatus =
-          btn.dataset.status || '';
-
-        loadBrains();
-      }
+      loadBrains
     );
-  });
+  }
 
-  retryBtn.addEventListener(
-    'click',
-    loadBrains
-  );
 
   // ============================================================
   // LEARNING
@@ -673,81 +1184,56 @@
   function showLearningState(
     state
   ) {
-    learningLoading.classList.add(
-      'hidden'
+    [
+      learningLoading,
+      learningError,
+      learningEmpty,
+      learningKnowledgeList,
+      learningGamesList
+    ].forEach(
+      (element) =>
+        safeClass(
+          element,
+          'add',
+          'hidden'
+        )
     );
 
-    learningError.classList.add(
+    const target = {
+      loading:
+        learningLoading,
+
+      error:
+        learningError,
+
+      empty:
+        learningEmpty,
+
+      knowledge:
+        learningKnowledgeList,
+
+      games:
+        learningGamesList
+    }[state];
+
+    safeClass(
+      target,
+      'remove',
       'hidden'
     );
-
-    learningEmpty.classList.add(
-      'hidden'
-    );
-
-    learningKnowledgeList.classList.add(
-      'hidden'
-    );
-
-    learningGamesList.classList.add(
-      'hidden'
-    );
-
-    if (state === 'loading') {
-      learningLoading.classList.remove(
-        'hidden'
-      );
-    }
-
-    if (state === 'error') {
-      learningError.classList.remove(
-        'hidden'
-      );
-    }
-
-    if (state === 'empty') {
-      learningEmpty.classList.remove(
-        'hidden'
-      );
-    }
-
-    if (state === 'knowledge') {
-      learningKnowledgeList.classList.remove(
-        'hidden'
-      );
-    }
-
-    if (state === 'games') {
-      learningGamesList.classList.remove(
-        'hidden'
-      );
-    }
   }
 
+
   async function loadLearning() {
-    showLearningState('loading');
+    showLearningState(
+      'loading'
+    );
 
     try {
-      const res = await fetch(
-        '/api/dashboard/learning',
-        {
-          credentials: 'include'
-        }
-      );
-
-      if (res.status === 401) {
-        showLogin();
-        return;
-      }
-
-      if (!res.ok) {
-        throw new Error(
-          'Server error ' + res.status
-        );
-      }
-
       const data =
-        await res.json();
+        await fetchJSON(
+          '/api/dashboard/learning'
+        );
 
       learningData = {
         totals:
@@ -772,120 +1258,84 @@
 
       renderCurrentLearningTab();
 
-    } catch (err) {
-      learningErrorDetail.textContent =
-        err.message ||
-        'Không thể tải dữ liệu Learning';
-
-      showLearningState('error');
-    }
-  }
-
-  function updateLearningStats() {
-    const totals =
-      learningData.totals || {};
-
-    document.getElementById(
-      'learning-total'
-    ).textContent =
-      totals.knowledge ?? 0;
-
-    document.getElementById(
-      'learning-games'
-    ).textContent =
-      totals.games ?? 0;
-
-    document.getElementById(
-      'learning-candidates'
-    ).textContent =
-      totals.candidateKnowledge ?? 0;
-
-    document.getElementById(
-      'learning-events'
-    ).textContent =
-      totals.learningEvents ?? 0;
-  }
-
-  function renderCurrentLearningTab() {
-    const query =
-      learningSearch.value
-        .trim()
-        .toLowerCase();
-
-    if (
-      currentLearningTab ===
-      'knowledge'
-    ) {
-      const list =
-        learningData.knowledge.filter(
-          item => {
-            if (!query) {
-              return true;
-            }
-
-            const text = [
-              item.topic,
-              item.lesson,
-              item.game?.name,
-              item.visibility
-            ]
-              .filter(Boolean)
-              .join(' ')
-              .toLowerCase();
-
-            return text.includes(
-              query
-            );
-          }
-        );
-
-      if (!list.length) {
-        showLearningState('empty');
+    } catch (error) {
+      if (
+        error.message ===
+        'UNAUTHORIZED'
+      ) {
         return;
       }
 
-      learningKnowledgeList.innerHTML =
-        list
-          .map(
-            renderKnowledgeCard
-          )
-          .join('');
-
-      showLearningState(
-        'knowledge'
+      setText(
+        learningErrorDetail,
+        error.message ||
+          'Không thể tải dữ liệu Learning'
       );
 
-      learningKnowledgeList
-        .querySelectorAll(
-          '.learning-card'
-        )
-        .forEach(card => {
-          card.addEventListener(
-            'click',
-            () =>
-              openLearningDetail(
-                'knowledge',
-                Number(
-                  card.dataset.index
-                )
-              )
-          );
-        });
-
-      return;
+      showLearningState(
+        'error'
+      );
     }
+  }
 
-    const games =
-      learningData.games.filter(
-        game => {
+
+  function updateLearningStats() {
+    const totals =
+      learningData.totals ||
+      {};
+
+    setText(
+      $('learning-total'),
+      totals.knowledge ?? 0
+    );
+
+    setText(
+      $('learning-games'),
+      totals.games ?? 0
+    );
+
+    setText(
+      $('learning-candidates'),
+      totals.candidateKnowledge ??
+        0
+    );
+
+    setText(
+      $('learning-events'),
+      totals.learningEvents ??
+        0
+    );
+  }
+
+
+  function getKnowledgeSearchResults() {
+    const query =
+      learningSearch?.value
+        .trim()
+        .toLowerCase() ||
+      '';
+
+    return learningData.knowledge
+      .map(
+        (item, originalIndex) => ({
+          item,
+          originalIndex
+        })
+      )
+      .filter(
+        ({
+          item
+        }) => {
           if (!query) {
             return true;
           }
 
           const text = [
-            game.name,
-            game.description,
-            game.learningStatus
+            item.topic,
+            item.lesson,
+            item.game?.name,
+            item.visibility,
+            item.category
           ]
             .filter(Boolean)
             .join(' ')
@@ -896,38 +1346,162 @@
           );
         }
       );
+  }
 
-    if (!games.length) {
-      showLearningState('empty');
+
+  function getGameSearchResults() {
+    const query =
+      learningSearch?.value
+        .trim()
+        .toLowerCase() ||
+      '';
+
+    return learningData.games
+      .map(
+        (item, originalIndex) => ({
+          item,
+          originalIndex
+        })
+      )
+      .filter(
+        ({
+          item
+        }) => {
+          if (!query) {
+            return true;
+          }
+
+          const text = [
+            item.name,
+            item.description,
+            item.learningStatus,
+            item.placeId,
+            item.universeId
+          ]
+            .filter(Boolean)
+            .join(' ')
+            .toLowerCase();
+
+          return text.includes(
+            query
+          );
+        }
+      );
+  }
+
+
+  function renderCurrentLearningTab() {
+    if (
+      currentLearningTab ===
+      'knowledge'
+    ) {
+      const results =
+        getKnowledgeSearchResults();
+
+      if (!results.length) {
+        learningKnowledgeList.innerHTML =
+          '';
+
+        showLearningState(
+          'empty'
+        );
+
+        return;
+      }
+
+      learningKnowledgeList.innerHTML =
+        results
+          .map(
+            ({
+              item,
+              originalIndex
+            }) =>
+              renderKnowledgeCard(
+                item,
+                originalIndex
+              )
+          )
+          .join('');
+
+      learningKnowledgeList
+        .querySelectorAll(
+          '.learning-card'
+        )
+        .forEach(
+          (card) => {
+            card.addEventListener(
+              'click',
+              () =>
+                openLearningDetail(
+                  'knowledge',
+                  Number(
+                    card.dataset.index
+                  )
+                )
+            );
+          }
+        );
+
+      showLearningState(
+        'knowledge'
+      );
+
+      return;
+    }
+
+
+    const results =
+      getGameSearchResults();
+
+    if (!results.length) {
+      learningGamesList.innerHTML =
+        '';
+
+      showLearningState(
+        'empty'
+      );
+
       return;
     }
 
     learningGamesList.innerHTML =
-      games
+      results
         .map(
-          renderGameLearningCard
+          ({
+            item,
+            originalIndex
+          }) =>
+            renderGameLearningCard(
+              item,
+              originalIndex
+            )
         )
         .join('');
-
-    showLearningState('games');
 
     learningGamesList
       .querySelectorAll(
         '.learning-card'
       )
-      .forEach(card => {
-        card.addEventListener(
-          'click',
-          () =>
-            openLearningDetail(
-              'game',
-              Number(
-                card.dataset.index
+      .forEach(
+        (card) => {
+          card.addEventListener(
+            'click',
+            () =>
+              openLearningDetail(
+                'game',
+                Number(
+                  card.dataset.index
+                )
               )
-            )
-        );
-      });
+          );
+        }
+      );
+
+    showLearningState(
+      'games'
+    );
   }
+
 
   function renderKnowledgeCard(
     item,
@@ -940,6 +1514,15 @@
         ) * 100
       );
 
+    const safeConfidence =
+      Math.min(
+        100,
+        Math.max(
+          0,
+          confidence
+        )
+      );
+
     const verified =
       item.verified === true;
 
@@ -948,8 +1531,11 @@
         class="learning-card"
         data-index="${index}"
       >
+
         <div class="learning-card-top">
+
           <div>
+
             <h3>
               ${escapeHtml(
                 item.topic ||
@@ -963,6 +1549,7 @@
                 'Chưa có mô tả'
               )}
             </p>
+
           </div>
 
           <span
@@ -978,18 +1565,21 @@
                 : 'Candidate'
             }
           </span>
+
         </div>
 
         <div class="learning-card-meta">
+
           <span>
             Confidence:
-            ${confidence}%
+            ${safeConfidence}%
           </span>
 
           <span>
             Evidence:
             ${Number(
-              item.evidenceCount || 0
+              item.evidenceCount ||
+              0
             )}
           </span>
 
@@ -1002,20 +1592,22 @@
                 : 'System'
             }
           </span>
+
         </div>
 
         <div class="learning-progress">
+
           <div
             class="learning-progress-fill"
-            style="width:${Math.min(
-              100,
-              Math.max(0, confidence)
-            )}%"
+            style="width:${safeConfidence}%"
           ></div>
+
         </div>
+
       </article>
     `;
   }
+
 
   function renderGameLearningCard(
     game,
@@ -1024,6 +1616,15 @@
     const score =
       Number(
         game.learningScore || 0
+      );
+
+    const safeScore =
+      Math.min(
+        100,
+        Math.max(
+          0,
+          score
+        )
       );
 
     const status =
@@ -1035,6 +1636,7 @@
         class="learning-card game-learning-card"
         data-index="${index}"
       >
+
         ${
           game.iconUrl
             ? `
@@ -1055,8 +1657,11 @@
         }
 
         <div class="learning-game-info">
+
           <div class="learning-card-top">
+
             <div>
+
               <h3>
                 ${escapeHtml(
                   game.name ||
@@ -1070,6 +1675,7 @@
                   'Chưa có mô tả.'
                 )}
               </p>
+
             </div>
 
             <span class="learning-badge">
@@ -1077,12 +1683,14 @@
                 status
               )}
             </span>
+
           </div>
 
           <div class="learning-card-meta">
+
             <span>
               Score:
-              ${score}%
+              ${safeScore}%
             </span>
 
             <span>
@@ -1096,59 +1704,81 @@
             <span>
               Visits:
               ${Number(
-                game.totalVisits || 0
+                game.totalVisits ||
+                0
               )}
             </span>
+
           </div>
 
           <div class="learning-progress">
+
             <div
               class="learning-progress-fill"
-              style="width:${Math.min(
-                100,
-                Math.max(0, score)
-              )}%"
+              style="width:${safeScore}%"
             ></div>
+
           </div>
+
         </div>
+
       </article>
     `;
   }
+
 
   function openLearningDetail(
     type,
     index
   ) {
-    let item;
+    let item = null;
 
-    if (type === 'knowledge') {
+    if (
+      type ===
+      'knowledge'
+    ) {
       item =
         learningData.knowledge[
           index
         ];
-    } else {
+    }
+
+    if (
+      type ===
+      'game'
+    ) {
       item =
         learningData.games[
           index
         ];
     }
 
-    if (!item) return;
+    if (!item) {
+      return;
+    }
 
-    if (type === 'knowledge') {
+
+    if (
+      type ===
+      'knowledge'
+    ) {
       const confidence =
         Math.round(
           Number(
-            item.confidence || 0
+            item.confidence ||
+            0
           ) * 100
         );
 
       learningDetailBody.innerHTML = `
         <div class="learning-detail">
+
           <div class="learning-detail-title">
+
             <span>📚</span>
 
             <div>
+
               <h2>
                 ${escapeHtml(
                   item.topic ||
@@ -1163,11 +1793,17 @@
                     : 'Candidate knowledge'
                 }
               </p>
+
             </div>
+
           </div>
 
+
           <div class="learning-detail-section">
-            <h3>Lesson</h3>
+
+            <h3>
+              Lesson
+            </h3>
 
             <p>
               ${escapeHtml(
@@ -1175,19 +1811,27 @@
                 'Không có lesson.'
               )}
             </p>
+
           </div>
+
 
           <div class="learning-detail-grid">
 
             <div>
-              <span>Confidence</span>
+              <span>
+                Confidence
+              </span>
+
               <strong>
                 ${confidence}%
               </strong>
             </div>
 
             <div>
-              <span>Evidence</span>
+              <span>
+                Evidence
+              </span>
+
               <strong>
                 ${Number(
                   item.evidenceCount ||
@@ -1197,7 +1841,10 @@
             </div>
 
             <div>
-              <span>Visibility</span>
+              <span>
+                Visibility
+              </span>
+
               <strong>
                 ${escapeHtml(
                   item.visibility ||
@@ -1207,7 +1854,10 @@
             </div>
 
             <div>
-              <span>Game</span>
+              <span>
+                Game
+              </span>
+
               <strong>
                 ${escapeHtml(
                   item.game?.name ||
@@ -1218,8 +1868,12 @@
 
           </div>
 
+
           <div class="learning-detail-section">
-            <h3>Timeline</h3>
+
+            <h3>
+              Timeline
+            </h3>
 
             <p>
               Created:
@@ -1234,18 +1888,27 @@
                 item.updatedAt
               )}
             </p>
+
           </div>
+
         </div>
       `;
+    }
 
-    } else {
+
+    if (
+      type ===
+      'game'
+    ) {
       learningDetailBody.innerHTML = `
         <div class="learning-detail">
 
           <div class="learning-detail-title">
+
             <span>🎮</span>
 
             <div>
+
               <h2>
                 ${escapeHtml(
                   item.name ||
@@ -1259,8 +1922,11 @@
                   'discovered'
                 )}
               </p>
+
             </div>
+
           </div>
+
 
           ${
             item.thumbnailUrl
@@ -1276,8 +1942,12 @@
               : ''
           }
 
+
           <div class="learning-detail-section">
-            <h3>Description</h3>
+
+            <h3>
+              Description
+            </h3>
 
             <p>
               ${escapeHtml(
@@ -1285,12 +1955,17 @@
                 'Chưa có mô tả.'
               )}
             </p>
+
           </div>
+
 
           <div class="learning-detail-grid">
 
             <div>
-              <span>Learning Score</span>
+              <span>
+                Learning Score
+              </span>
+
               <strong>
                 ${Number(
                   item.learningScore ||
@@ -1300,7 +1975,10 @@
             </div>
 
             <div>
-              <span>Knowledge</span>
+              <span>
+                Knowledge
+              </span>
+
               <strong>
                 ${Number(
                   item.verifiedKnowledgeCount ||
@@ -1310,7 +1988,10 @@
             </div>
 
             <div>
-              <span>Candidate</span>
+              <span>
+                Candidate
+              </span>
+
               <strong>
                 ${Number(
                   item.candidateKnowledgeCount ||
@@ -1320,7 +2001,10 @@
             </div>
 
             <div>
-              <span>Observations</span>
+              <span>
+                Observations
+              </span>
+
               <strong>
                 ${Number(
                   item.observations ||
@@ -1330,7 +2014,10 @@
             </div>
 
             <div>
-              <span>Brains</span>
+              <span>
+                Brains
+              </span>
+
               <strong>
                 ${Number(
                   item.brainCount ||
@@ -1340,7 +2027,10 @@
             </div>
 
             <div>
-              <span>Players</span>
+              <span>
+                Players
+              </span>
+
               <strong>
                 ${Number(
                   item.playerCount ||
@@ -1351,8 +2041,12 @@
 
           </div>
 
+
           <div class="learning-detail-section">
-            <h3>Game IDs</h3>
+
+            <h3>
+              Game IDs
+            </h3>
 
             <p>
               Place ID:
@@ -1369,56 +2063,81 @@
                 '—'
               )}
             </p>
+
           </div>
 
         </div>
       `;
     }
 
-    learningDetailModal.classList.remove(
-      'hidden'
+    openModal(
+      learningDetailModal
     );
   }
+
 
   function closeLearningDetail() {
-    learningDetailModal.classList.add(
-      'hidden'
+    closeModal(
+      learningDetailModal
     );
   }
 
-  learningDetailClose.addEventListener(
-    'click',
-    closeLearningDetail
-  );
 
-  learningDetailBackdrop.addEventListener(
-    'click',
-    closeLearningDetail
-  );
+  if (learningDetailClose) {
+    learningDetailClose.addEventListener(
+      'click',
+      closeLearningDetail
+    );
+  }
 
-  learningRefreshBtn.addEventListener(
-    'click',
-    loadLearning
-  );
 
-  learningRetryBtn.addEventListener(
-    'click',
-    loadLearning
-  );
+  if (learningDetailModal) {
+    const backdrop =
+      learningDetailModal.querySelector(
+        '.learning-modal-backdrop, .modal-backdrop, .backdrop'
+      );
 
-  learningSearch.addEventListener(
-    'input',
-    renderCurrentLearningTab
-  );
+    if (backdrop) {
+      backdrop.addEventListener(
+        'click',
+        closeLearningDetail
+      );
+    }
+  }
+
+
+  if (learningRefreshBtn) {
+    learningRefreshBtn.addEventListener(
+      'click',
+      loadLearning
+    );
+  }
+
+
+  if (learningRetryBtn) {
+    learningRetryBtn.addEventListener(
+      'click',
+      loadLearning
+    );
+  }
+
+
+  if (learningSearch) {
+    learningSearch.addEventListener(
+      'input',
+      renderCurrentLearningTab
+    );
+  }
+
 
   learningTabs.forEach(
-    tab => {
+    (tab) => {
       tab.addEventListener(
         'click',
         () => {
           learningTabs.forEach(
-            t =>
-              t.classList.remove(
+            (item) =>
+              item.classList.remove(
                 'active'
               )
           );
@@ -1428,13 +2147,755 @@
           );
 
           currentLearningTab =
-            tab.dataset.learningTab;
+            tab.dataset.learningTab ||
+            'knowledge';
 
           renderCurrentLearningTab();
         }
       );
     }
   );
+
+
+  // ============================================================
+  // SKILLS
+  // ============================================================
+
+  async function loadSkills() {
+    showSkillsLoading();
+
+    try {
+      const data =
+        await fetchJSON(
+          '/api/skills'
+        );
+
+      skillsData =
+        Array.isArray(
+          data.skills
+        )
+          ? data.skills
+          : [];
+
+      renderSkills();
+
+    } catch (error) {
+      if (
+        error.message ===
+        'UNAUTHORIZED'
+      ) {
+        return;
+      }
+
+      setText(
+        skillsErrorDetail,
+        error.message ||
+          'Lỗi không xác định'
+      );
+
+      safeClass(
+        skillsError,
+        'remove',
+        'hidden'
+      );
+
+    } finally {
+      safeClass(
+        skillsLoading,
+        'add',
+        'hidden'
+      );
+    }
+  }
+
+
+  function showSkillsLoading() {
+    safeClass(
+      skillsLoading,
+      'remove',
+      'hidden'
+    );
+
+    safeClass(
+      skillsError,
+      'add',
+      'hidden'
+    );
+
+    safeClass(
+      skillsEmpty,
+      'add',
+      'hidden'
+    );
+  }
+
+
+  function renderSkills() {
+    const query =
+      String(
+        skillsSearch?.value ||
+        ''
+      )
+        .trim()
+        .toLowerCase();
+
+    let list =
+      skillsData.slice();
+
+    if (
+      currentSkillTab !==
+      'all'
+    ) {
+      list =
+        list.filter(
+          (skill) =>
+            skill.type ===
+            currentSkillTab
+        );
+    }
+
+    if (query) {
+      list =
+        list.filter(
+          (skill) => {
+            const searchable = [
+              skill.id,
+              skill.name,
+              skill.ownerId,
+              skill.description,
+              skill.trigger,
+              skill.instructions,
+              ...(Array.isArray(
+                skill.tools
+              )
+                ? skill.tools
+                : []),
+              ...(Array.isArray(
+                skill.permissions
+              )
+                ? skill.permissions
+                : [])
+            ]
+              .filter(Boolean)
+              .join(' ')
+              .toLowerCase();
+
+            return searchable.includes(
+              query
+            );
+          }
+        );
+    }
+
+    skillsList.innerHTML = '';
+
+    if (!list.length) {
+      safeClass(
+        skillsEmpty,
+        'remove',
+        'hidden'
+      );
+
+      return;
+    }
+
+    safeClass(
+      skillsEmpty,
+      'add',
+      'hidden'
+    );
+
+
+    list.forEach(
+      (skill) => {
+        const card =
+          document.createElement(
+            'article'
+          );
+
+        card.className =
+          'learning-card skill-card';
+
+        const builtin =
+          skill.type ===
+          'builtin';
+
+        const icon =
+          builtin
+            ? '🔧'
+            : '👤';
+
+        const enabled =
+          skill.enabled !==
+          false;
+
+        const status =
+          enabled
+            ? 'Enabled'
+            : 'Disabled';
+
+        const tools =
+          Array.isArray(
+            skill.tools
+          )
+            ? skill.tools
+            : [];
+
+        const permissions =
+          Array.isArray(
+            skill.permissions
+          )
+            ? skill.permissions
+            : [];
+
+        card.innerHTML = `
+          <div class="learning-card-top">
+
+            <div class="learning-card-title">
+
+              <span class="skill-icon">
+                ${icon}
+              </span>
+
+              <div class="grow">
+
+                <div class="title">
+                  ${escapeHtml(
+                    skill.name ||
+                    skill.id ||
+                    'Unnamed Skill'
+                  )}
+                </div>
+
+                <div class="muted small">
+                  ${escapeHtml(
+                    skill.id ||
+                    ''
+                  )}
+                </div>
+
+              </div>
+
+              <span
+                class="learning-badge ${
+                  builtin
+                    ? ''
+                    : 'candidate'
+                }"
+              >
+                ${
+                  builtin
+                    ? 'Built-in'
+                    : 'User'
+                }
+              </span>
+
+            </div>
+
+
+            <div class="learning-card-meta">
+
+              <span>
+                👤 ${
+                  skill.ownerId
+                    ? escapeHtml(
+                        skill.ownerId
+                      )
+                    : 'System'
+                }
+              </span>
+
+              <span>
+                ▶️ ${
+                  Number(
+                    skill.usageCount ||
+                    0
+                  )
+                }
+              </span>
+
+              <span
+                class="${
+                  enabled
+                    ? 'online'
+                    : 'offline'
+                }"
+              >
+                ● ${status}
+              </span>
+
+            </div>
+
+
+            <p class="learning-card-description">
+              ${escapeHtml(
+                skill.description ||
+                'Không có mô tả.'
+              )}
+            </p>
+
+
+            <div class="chips">
+
+              ${tools
+                .slice(0, 6)
+                .map(
+                  (tool) =>
+                    `<span class="chip">
+                      🧰 ${escapeHtml(tool)}
+                    </span>`
+                )
+                .join('')}
+
+              ${permissions
+                .slice(0, 4)
+                .map(
+                  (permission) =>
+                    `<span class="chip">
+                      🔐 ${escapeHtml(
+                        permission
+                      )}
+                    </span>`
+                )
+                .join('')}
+
+            </div>
+
+          </div>
+        `;
+
+        card.addEventListener(
+          'click',
+          () =>
+            openSkillDetail(
+              skill
+            )
+        );
+
+        skillsList.appendChild(
+          card
+        );
+      }
+    );
+  }
+
+
+  function openSkillDetail(
+    skill
+  ) {
+    const oldModal =
+      document.getElementById(
+        'skill-detail-modal'
+      );
+
+    if (oldModal) {
+      oldModal.remove();
+    }
+
+    const modal =
+      document.createElement(
+        'div'
+      );
+
+    modal.id =
+      'skill-detail-modal';
+
+    modal.className =
+      'modal';
+
+    const tools =
+      Array.isArray(
+        skill.tools
+      )
+        ? skill.tools
+        : [];
+
+    const permissions =
+      Array.isArray(
+        skill.permissions
+      )
+        ? skill.permissions
+        : [];
+
+    const builtin =
+      skill.type ===
+      'builtin';
+
+    modal.innerHTML = `
+      <div class="modal-backdrop"></div>
+
+      <div class="modal-card skill-detail-card">
+
+        <div class="modal-header">
+
+          <div>
+
+            <h2>
+              ${
+                builtin
+                  ? '🔧'
+                  : '👤'
+              }
+
+              ${escapeHtml(
+                skill.name ||
+                skill.id ||
+                'Skill'
+              )}
+            </h2>
+
+            <p class="muted">
+              ${escapeHtml(
+                skill.id ||
+                ''
+              )}
+            </p>
+
+          </div>
+
+          <button
+            class="modal-close"
+            type="button"
+            aria-label="Đóng"
+          >
+            ×
+          </button>
+
+        </div>
+
+
+        <div class="skill-detail-body">
+
+          <div class="learning-detail-grid">
+
+            <div>
+              <span>
+                Type
+              </span>
+
+              <strong>
+                ${
+                  builtin
+                    ? 'Built-in'
+                    : 'User Created'
+                }
+              </strong>
+            </div>
+
+
+            <div>
+              <span>
+                Owner
+              </span>
+
+              <strong>
+                ${
+                  skill.ownerId
+                    ? escapeHtml(
+                        skill.ownerId
+                      )
+                    : 'System'
+                }
+              </strong>
+            </div>
+
+
+            <div>
+              <span>
+                Version
+              </span>
+
+              <strong>
+                ${escapeHtml(
+                  skill.version ||
+                  '1.0.0'
+                )}
+              </strong>
+            </div>
+
+
+            <div>
+              <span>
+                Status
+              </span>
+
+              <strong>
+                ${
+                  skill.enabled !==
+                  false
+                    ? '🟢 Enabled'
+                    : '🔴 Disabled'
+                }
+              </strong>
+            </div>
+
+
+            <div>
+              <span>
+                Usage
+              </span>
+
+              <strong>
+                ${Number(
+                  skill.usageCount ||
+                  0
+                )}
+              </strong>
+            </div>
+
+
+            <div>
+              <span>
+                Trigger
+              </span>
+
+              <strong>
+                ${escapeHtml(
+                  skill.trigger ||
+                  '—'
+                )}
+              </strong>
+            </div>
+
+          </div>
+
+
+          <div class="learning-detail-section">
+
+            <h3>
+              Description
+            </h3>
+
+            <p>
+              ${escapeHtml(
+                skill.description ||
+                'Không có mô tả.'
+              )}
+            </p>
+
+          </div>
+
+
+          <div class="learning-detail-section">
+
+            <h3>
+              Instructions
+            </h3>
+
+            <pre class="skill-instructions">${escapeHtml(
+              skill.instructions ||
+              'Không có instructions.'
+            )}</pre>
+
+          </div>
+
+
+          <div class="learning-detail-section">
+
+            <h3>
+              Tools
+            </h3>
+
+            <div class="chips">
+
+              ${
+                tools.length
+                  ? tools
+                      .map(
+                        (tool) =>
+                          `<span class="chip">
+                            🧰 ${escapeHtml(
+                              tool
+                            )}
+                          </span>`
+                      )
+                      .join('')
+                  : '<span class="muted">Không có tool.</span>'
+              }
+
+            </div>
+
+          </div>
+
+
+          <div class="learning-detail-section">
+
+            <h3>
+              Permissions
+            </h3>
+
+            <div class="chips">
+
+              ${
+                permissions.length
+                  ? permissions
+                      .map(
+                        (permission) =>
+                          `<span class="chip">
+                            🔐 ${escapeHtml(
+                              permission
+                            )}
+                          </span>`
+                      )
+                      .join('')
+                  : '<span class="muted">Không có permission.</span>'
+              }
+
+            </div>
+
+          </div>
+
+
+          <div class="learning-detail-section">
+
+            <h3>
+              Timeline
+            </h3>
+
+            <p>
+              Created:
+              ${formatTime(
+                skill.createdAt
+              )}
+            </p>
+
+            <p>
+              Updated:
+              ${formatTime(
+                skill.updatedAt
+              )}
+            </p>
+
+            <p>
+              Last Used:
+              ${formatTime(
+                skill.lastUsedAt
+              )}
+            </p>
+
+          </div>
+
+        </div>
+
+      </div>
+    `;
+
+
+    document.body.appendChild(
+      modal
+    );
+
+
+    const closeButton =
+      modal.querySelector(
+        '.modal-close'
+      );
+
+    const backdrop =
+      modal.querySelector(
+        '.modal-backdrop, .backdrop'
+      );
+
+
+    const close = () => {
+      modal.remove();
+
+      if (
+        !document.querySelector(
+          '.modal:not(.hidden)'
+        )
+      ) {
+        document.body.classList.remove(
+          'modal-open'
+        );
+      }
+    };
+
+
+    closeButton.addEventListener(
+      'click',
+      close
+    );
+
+
+    backdrop.addEventListener(
+      'click',
+      close
+    );
+
+
+    document.addEventListener(
+      'keydown',
+      function escapeHandler(event) {
+        if (
+          event.key ===
+          'Escape'
+        ) {
+          close();
+
+          document.removeEventListener(
+            'keydown',
+            escapeHandler
+          );
+        }
+      }
+    );
+
+
+    openModal(modal);
+  }
+
+
+  if (skillsRefreshBtn) {
+    skillsRefreshBtn.addEventListener(
+      'click',
+      loadSkills
+    );
+  }
+
+
+  if (skillsRetryBtn) {
+    skillsRetryBtn.addEventListener(
+      'click',
+      loadSkills
+    );
+  }
+
+
+  if (skillsSearch) {
+    skillsSearch.addEventListener(
+      'input',
+      renderSkills
+    );
+  }
+
+
+  skillsTabs.forEach(
+    (tab) => {
+      tab.addEventListener(
+        'click',
+        () => {
+          skillsTabs.forEach(
+            (item) =>
+              item.classList.remove(
+                'active'
+              )
+          );
+
+          tab.classList.add(
+            'active'
+          );
+
+          currentSkillTab =
+            tab.dataset.skillTab ||
+            'all';
+
+          renderSkills();
+        }
+      );
+    }
+  );
+
 
   // ============================================================
   // POLLING
@@ -1452,10 +2913,18 @@
 
     pollTimer =
       setInterval(
-        loadBrains,
+        () => {
+          if (
+            currentView ===
+            'dashboard'
+          ) {
+            loadBrains();
+          }
+        },
         8000
       );
   }
+
 
   function stopPolling() {
     if (pollTimer) {
@@ -1466,6 +2935,36 @@
       pollTimer = null;
     }
   }
+
+
+  // ============================================================
+  // KEYBOARD
+  // ============================================================
+
+  document.addEventListener(
+    'keydown',
+    (event) => {
+      if (
+        event.key !==
+        'Escape'
+      ) {
+        return;
+      }
+
+      closeDetailModal();
+      closeLearningDetail();
+
+      const skillModal =
+        document.getElementById(
+          'skill-detail-modal'
+        );
+
+      if (skillModal) {
+        skillModal.remove();
+      }
+    }
+  );
+
 
   // ============================================================
   // INIT

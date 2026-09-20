@@ -60,6 +60,85 @@ const {
   BrainRuntime
 } = require('./core/brain-runtime');
 
+// ============================================================
+// ASTRA BRAIN — OPTIONAL PERSISTENT DATABASE
+// ============================================================
+//
+// DATABASE_URL:
+// - Có  -> dùng PostgreSQL khi adapter được bật
+// - Không -> giữ nguyên brains.json hiện tại
+//
+// Không yêu cầu AI API key.
+// Đây chỉ là storage backend.
+// ============================================================
+
+const DATABASE_URL =
+  process.env.DATABASE_URL || '';
+
+const USE_POSTGRES =
+  DATABASE_URL.trim().length > 0;
+
+let postgresPool = null;
+
+if (USE_POSTGRES) {
+  try {
+    const { Pool } = require('pg');
+
+    postgresPool = new Pool({
+      connectionString: DATABASE_URL,
+
+      ssl:
+        process.env.NODE_ENV === 'production'
+          ? { rejectUnauthorized: false }
+          : false,
+
+      max: Number(
+        process.env.PG_POOL_MAX || 5
+      ),
+
+      idleTimeoutMillis: 30000,
+
+      connectionTimeoutMillis: 10000
+    });
+
+    postgresPool.on(
+      'error',
+      error => {
+        console.error(
+          '[Astra DB] PostgreSQL pool error:',
+          error.message
+        );
+      }
+    );
+
+    console.log(
+      '[Astra DB] PostgreSQL adapter enabled.'
+    );
+
+  } catch (error) {
+
+    console.error(
+      '[Astra DB] PostgreSQL adapter could not start:',
+      error.message
+    );
+
+    console.error(
+      '[Astra DB] Falling back to brains.json.'
+    );
+
+    postgresPool = null;
+  }
+} else {
+
+  console.log(
+    '[Astra DB] DATABASE_URL not configured.'
+  );
+
+  console.log(
+    '[Astra DB] Using existing brains.json storage.'
+  );
+}
+
 const {
   ToolRegistry
 } = require('./core/tool-registry');
@@ -76,6 +155,48 @@ const playerTool =
 const gameTool =
   require('./tools/game-tool');
 
+const AgentLoop =
+  require('./agent/AgentLoop');
+
+const IntentEngine =
+  require('./agent/IntentEngine');
+
+const Planner =
+  require('./agent/Planner');
+
+const WorldModel =
+  require('./agent/WorldModel');
+
+const SelfState =
+  require('./agent/SelfState');
+
+const VerificationTool =
+  require('./tools/verification-tool');
+
+const CapabilityRegistry =
+  require('./core/capabilityRegistry');
+
+const CapabilityRouter =
+  require('./capabilities/capabilityRouter');
+
+const {
+  registerCapabilities
+} =
+  require('./capabilities');
+
+const {
+  createProviderRouter
+} =
+  require('./providers');
+
+const registerAgentAPI =
+  require('./server/agent-api');
+
+const registerCapabilityAPI =
+  require('./server/capability-api');
+
+const registerHealthAPI =
+  require('./server/health-api');
 // ============================================================
 // CONFIG
 // ============================================================
@@ -250,6 +371,279 @@ function loadDB() {
 let db =
   loadDB();
 
+
+// ============================================================
+// ASTRA BRAIN — POSTGRESQL SCHEMA + STORAGE HELPERS
+// ============================================================
+
+let postgresReady = false;
+
+async function initPostgres() {
+  if (!postgresPool) {
+    console.log(
+      '[Astra DB] PostgreSQL disabled — JSON storage remains active.'
+    );
+
+    return false;
+  }
+
+  try {
+
+    await postgresPool.query(`
+      CREATE TABLE IF NOT EXISTS astra_brain_state (
+        id INTEGER PRIMARY KEY,
+        data JSONB NOT NULL,
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+    `);
+
+    postgresReady = true;
+
+    console.log(
+      '[Astra DB] PostgreSQL schema initialized.'
+    );
+
+
+    // ==========================================================
+    // LOAD PERSISTENT STATE
+    // ==========================================================
+
+    const postgresDB =
+      await loadPostgresDB();
+
+
+    if (
+      postgresDB &&
+      typeof postgresDB === 'object'
+    ) {
+
+      console.log(
+        '[Astra DB] Persistent state found in PostgreSQL.'
+      );
+
+      // PostgreSQL becomes the source of truth.
+      db = {
+        ...createEmptyDB(),
+        ...postgresDB
+      };
+
+      console.log(
+        '[Astra DB] Database restored from PostgreSQL.'
+      );
+
+    } else {
+
+  console.log(
+    '[Astra DB] PostgreSQL is empty.'
+  );
+
+
+  // ==========================================================
+  // SAFETY CHECK
+  // ==========================================================
+  // Never blindly overwrite PostgreSQL with an empty JSON DB.
+  // ==========================================================
+
+  const jsonHasData =
+    db &&
+    typeof db === 'object' &&
+    (
+      Object.keys(
+        db.brains || {}
+      ).length > 0 ||
+
+      Object.keys(
+        db.players || {}
+      ).length > 0 ||
+
+      Object.keys(
+        db.games || {}
+      ).length > 0 ||
+
+      Object.keys(
+        db.knowledge || {}
+      ).length > 0 ||
+
+      Array.isArray(
+        db.learningEvents
+      ) &&
+      db.learningEvents.length > 0
+    );
+
+
+  if (jsonHasData) {
+
+    console.log(
+      '[Astra DB] Existing JSON data detected.'
+    );
+
+    console.log(
+      '[Astra DB] Migrating JSON state to PostgreSQL.'
+    );
+
+    const migrated =
+      await savePostgresDB(
+        db
+      );
+
+    if (!migrated) {
+
+      console.error(
+        '[Astra DB] Initial PostgreSQL migration failed.'
+      );
+
+      console.error(
+        '[Astra DB] JSON remains the active fallback.'
+      );
+    } else {
+
+      console.log(
+        '[Astra DB] JSON → PostgreSQL migration completed.'
+      );
+    }
+
+  } else {
+
+    console.log(
+      '[Astra DB] JSON database is also empty.'
+    );
+
+    console.log(
+      '[Astra DB] PostgreSQL remains empty.'
+    );
+  }
+}
+
+      console.log(
+        '[Astra DB] Initial state migrated to PostgreSQL.'
+      );
+    }
+
+
+    return true;
+
+  } catch (error) {
+
+    postgresReady = false;
+
+    console.error(
+      '[Astra DB] PostgreSQL initialization failed:',
+      error.message
+    );
+
+    console.error(
+      '[Astra DB] Continuing with brains.json.'
+    );
+
+    return false;
+  }
+}
+
+async function loadPostgresDB() {
+  if (!postgresReady || !postgresPool) {
+    return null;
+  }
+
+  try {
+    const result = await postgresPool.query(`
+      SELECT data
+      FROM astra_brain_state
+      WHERE id = 1
+      LIMIT 1
+    `);
+
+    if (
+      !result.rows.length ||
+      !result.rows[0].data
+    ) {
+      return null;
+    }
+
+    return result.rows[0].data;
+
+  } catch (error) {
+
+    console.error(
+      '[Astra DB] PostgreSQL read failed:',
+      error.message
+    );
+
+    return null;
+  }
+}
+
+async function savePostgresDB(state) {
+  if (!postgresReady || !postgresPool) {
+    return false;
+  }
+
+  try {
+
+    await postgresPool.query(
+      `
+      INSERT INTO astra_brain_state
+        (id, data, updated_at)
+      VALUES
+        (1, $1::jsonb, NOW())
+
+      ON CONFLICT (id)
+      DO UPDATE SET
+        data = EXCLUDED.data,
+        updated_at = NOW()
+      `,
+      [JSON.stringify(state)]
+    );
+
+    return true;
+
+  } catch (error) {
+
+    console.error(
+      '[Astra DB] PostgreSQL write failed:',
+      error.message
+    );
+
+    return false;
+  }
+}
+
+// ============================================================
+// ASTRA BRAIN — DATABASE STARTUP SYNCHRONIZATION
+// ============================================================
+
+let postgresInitPromise = null;
+
+postgresInitPromise =
+  initPostgres().catch(error => {
+
+    postgresReady = false;
+
+    console.error(
+      '[Astra DB] Startup database initialization error:',
+      error.message
+    );
+
+    console.error(
+      '[Astra DB] Continuing with JSON storage.'
+    );
+
+    return false;
+  });
+
+
+async function waitForPostgres() {
+
+  if (!postgresInitPromise) {
+    return false;
+  }
+
+  try {
+    return await postgresInitPromise;
+  } catch {
+    return false;
+  }
+}
+
 let dirty =
   false;
 
@@ -259,7 +653,7 @@ function markDirty() {
     true;
 }
 
-function saveDB(
+async function performSaveDB(
   force = false
 ) {
 
@@ -267,9 +661,13 @@ function saveDB(
     !force &&
     !dirty
   ) {
-
     return;
   }
+
+
+  // ==========================================================
+  // 1. ALWAYS KEEP JSON BACKUP
+  // ==========================================================
 
   try {
 
@@ -292,21 +690,108 @@ function saveDB(
       dbPath
     );
 
-    dirty =
-      false;
-
-  } catch (e) {
+  } catch (error) {
 
     console.error(
-      'DB save error:',
-      e.message
+      '[Astra DB] JSON save error:',
+      error.message
     );
   }
+
+
+  // ==========================================================
+  // 2. WAIT FOR DATABASE INITIALIZATION
+  // ==========================================================
+
+  await waitForPostgres();
+
+
+  // ==========================================================
+  // 3. SAVE TO POSTGRESQL
+  // ==========================================================
+
+  if (
+    postgresReady &&
+    postgresPool
+  ) {
+
+    const saved =
+      await savePostgresDB(
+        db
+      );
+
+    if (!saved) {
+
+      console.error(
+        '[Astra DB] PostgreSQL save failed.'
+      );
+
+      console.error(
+        '[Astra DB] JSON backup remains available.'
+      );
+
+      return;
+    }
+  }
+
+
+  dirty =
+    false;
+}
+
+// ============================================================
+// ASTRA BRAIN — SERIALIZED DATABASE SAVE
+// ============================================================
+
+function saveDB(
+  force = false
+) {
+
+  saveQueue =
+    saveQueue
+      .then(() =>
+        performSaveDB(force)
+      )
+      .catch(error => {
+
+        console.error(
+          '[Astra DB] Save queue error:',
+          error.message
+        );
+
+      });
+
+  return saveQueue;
+}
+
+// ============================================================
+// ASTRA BRAIN — PERSISTENT SAVE QUEUE
+// ============================================================
+
+let saveQueue = Promise.resolve();
+
+function queueDBSave(
+  force = false
+) {
+
+  saveQueue =
+    saveQueue
+      .then(() => saveDB(force))
+      .catch(error => {
+
+        console.error(
+          '[Astra DB] Queued save failed:',
+          error.message
+        );
+
+      });
+
+  return saveQueue;
 }
 
 setInterval(
   () =>
-    saveDB(false),
+    queueDBSave(false),
   SAVE_INTERVAL_MS
 );
 
@@ -552,7 +1037,7 @@ function createSession() {
 
   markDirty();
 
-  saveDB(true);
+  queueDBSave(true);
 
   return sid;
 }
@@ -7037,6 +7522,102 @@ const server =
     handler
   );
 
+// ============================================================
+// ASTRA AGENT CORE
+// ============================================================
+
+const capabilityRegistry =
+  new CapabilityRegistry();
+
+registerCapabilities(
+  capabilityRegistry
+);
+
+const capabilityRouter =
+  new CapabilityRouter(
+    capabilityRegistry
+  );
+
+const intentEngine =
+  new IntentEngine();
+
+const worldModel =
+  new WorldModel();
+
+const selfState =
+  new SelfState();
+
+const planner =
+  new Planner(
+    capabilityRegistry
+  );
+
+const verifier =
+  new VerificationTool();
+
+const providerRouter =
+  createProviderRouter();
+
+const agentLoop =
+  new AgentLoop({
+
+    intentEngine,
+
+    planner,
+
+    worldModel,
+
+    selfState,
+
+    verifier,
+
+    capabilityRouter,
+
+    providerRouter,
+
+    memory:
+      typeof memoryTool !== 'undefined'
+        ? memoryTool
+        : null,
+
+    actionSystem:
+      null,
+
+    observationEngine:
+      null,
+
+    maxSteps:
+      8
+  });
+
+
+// ============================================================
+// ASTRA AGENT API
+// ============================================================
+
+registerAgentAPI(
+  app,
+  agentLoop,
+  requireBrainSecret
+);
+
+registerCapabilityAPI(
+  app,
+  capabilityRouter,
+  requireBrainSecret
+);
+
+registerHealthAPI(
+  app,
+  capabilityRouter,
+  providerRouter
+);
+
+
+// ============================================================
+// START SERVER
+// ============================================================
+
 server.listen(
   PORT,
   '0.0.0.0',
@@ -7069,6 +7650,82 @@ server.listen(
 );
 
 // ============================================================
+// ASTRA BRAIN — GRACEFUL DATABASE SHUTDOWN
+// ============================================================
+
+let shuttingDown = false;
+
+async function gracefulShutdown(
+  signal
+) {
+
+  if (shuttingDown) {
+    return;
+  }
+
+  shuttingDown = true;
+
+  console.log(
+    `[Astra DB] ${signal} received. Saving final state...`
+  );
+
+  try {
+
+    // Đợi các save trước đó hoàn thành
+    await saveDB(true);
+
+    console.log(
+      '[Astra DB] Final database save completed.'
+    );
+
+  } catch (error) {
+
+    console.error(
+      '[Astra DB] Final database save failed:',
+      error.message
+    );
+
+  }
+
+
+  // Đóng PostgreSQL pool
+  if (postgresPool) {
+
+    try {
+
+      await postgresPool.end();
+
+      console.log(
+        '[Astra DB] PostgreSQL connection closed.'
+      );
+
+    } catch (error) {
+
+      console.error(
+        '[Astra DB] PostgreSQL shutdown error:',
+        error.message
+      );
+    }
+  }
+
+
+  process.exit(0);
+}
+
+
+process.on(
+  'SIGTERM',
+  () =>
+    gracefulShutdown('SIGTERM')
+);
+
+process.on(
+  'SIGINT',
+  () =>
+    gracefulShutdown('SIGINT')
+);
+
+// ============================================================
 // PERIODIC CLEANUP
 // ============================================================
 
@@ -7079,40 +7736,6 @@ setInterval(
 
     cleanPlayerSessions();
 
-    saveDB(
-      false
-    );
-
   },
   30000
-);
-
-// ============================================================
-// SHUTDOWN
-// ============================================================
-
-function shutdown() {
-
-  try {
-
-    saveDB(
-      true
-    );
-
-  } finally {
-
-    process.exit(
-      0
-    );
-  }
-}
-
-process.on(
-  'SIGTERM',
-  shutdown
-);
-
-process.on(
-  'SIGINT',
-  shutdown
 );

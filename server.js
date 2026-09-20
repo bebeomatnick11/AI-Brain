@@ -53,6 +53,9 @@ const path = require('path');
 const crypto = require('crypto');
 const { URL } = require('url');
 
+const skillRegistry =
+  require('./skills/skill-registry');
+
 const {
   BrainRuntime
 } = require('./core/brain-runtime');
@@ -4658,6 +4661,281 @@ function markOffline() {
   }
 }
 
+    // ========================================================
+    // SKILL REGISTRY
+    // ========================================================
+
+    if (
+      pathname ===
+        '/api/skills' &&
+      method ===
+        'GET'
+    ) {
+      if (!isAuth(req)) {
+        return json(
+          res,
+          401,
+          {
+            error:
+              'Unauthorized'
+          },
+          corsHeaders
+        );
+      }
+
+      const query =
+        url.searchParams.get(
+          'q'
+        ) || '';
+
+      const type =
+        url.searchParams.get(
+          'type'
+        ) || '';
+
+      const ownerId =
+        url.searchParams.get(
+          'ownerId'
+        ) || '';
+
+      const skills =
+        skillRegistry.list({
+          query,
+          type,
+          ownerId
+        });
+
+      return json(
+        res,
+        200,
+        {
+          success: true,
+          total:
+            skills.length,
+          skills
+        },
+        corsHeaders
+      );
+    }
+
+    if (
+      pathname.startsWith(
+        '/api/skills/'
+      ) &&
+      method ===
+        'GET'
+    ) {
+      if (!isAuth(req)) {
+        return json(
+          res,
+          401,
+          {
+            error:
+              'Unauthorized'
+          },
+          corsHeaders
+        );
+      }
+
+      const id =
+        decodeURIComponent(
+          pathname.slice(
+            '/api/skills/'.length
+          )
+        );
+
+      const skill =
+        skillRegistry.get(
+          id
+        );
+
+      if (!skill) {
+        return json(
+          res,
+          404,
+          {
+            error:
+              'Skill not found'
+          },
+          corsHeaders
+        );
+      }
+
+      return json(
+        res,
+        200,
+        {
+          success: true,
+          skill
+        },
+        corsHeaders
+      );
+    }
+
+    if (
+      pathname ===
+        '/api/skills' &&
+      method ===
+        'POST'
+    ) {
+      if (!verifyBrain(req)) {
+        return json(
+          res,
+          401,
+          {
+            error:
+              'Invalid or missing Brain API secret'
+          },
+          corsHeaders
+        );
+      }
+
+      const body =
+        await readBody(req);
+
+      try {
+        const skill =
+          skillRegistry.create(
+            body
+          );
+
+        return json(
+          res,
+          201,
+          {
+            success: true,
+            skill
+          },
+          corsHeaders
+        );
+
+      } catch (error) {
+        return json(
+          res,
+          400,
+          {
+            error:
+              error.message
+          },
+          corsHeaders
+        );
+      }
+    }
+
+    if (
+      pathname.startsWith(
+        '/api/skills/'
+      ) &&
+      method ===
+        'PATCH'
+    ) {
+      if (!verifyBrain(req)) {
+        return json(
+          res,
+          401,
+          {
+            error:
+              'Invalid or missing Brain API secret'
+          },
+          corsHeaders
+        );
+      }
+
+      const id =
+        decodeURIComponent(
+          pathname.slice(
+            '/api/skills/'.length
+          )
+        );
+
+      const body =
+        await readBody(req);
+
+      try {
+        const skill =
+          skillRegistry.update(
+            id,
+            body
+          );
+
+        return json(
+          res,
+          200,
+          {
+            success: true,
+            skill
+          },
+          corsHeaders
+        );
+
+      } catch (error) {
+        return json(
+          res,
+          400,
+          {
+            error:
+              error.message
+          },
+          corsHeaders
+        );
+      }
+    }
+
+    if (
+      pathname.startsWith(
+        '/api/skills/'
+      ) &&
+      method ===
+        'DELETE'
+    ) {
+      if (!verifyBrain(req)) {
+        return json(
+          res,
+          401,
+          {
+            error:
+              'Invalid or missing Brain API secret'
+          },
+          corsHeaders
+        );
+      }
+
+      const id =
+        decodeURIComponent(
+          pathname.slice(
+            '/api/skills/'.length
+          )
+        );
+
+      try {
+        const skill =
+          skillRegistry.remove(
+            id
+          );
+
+        return json(
+          res,
+          200,
+          {
+            success: true,
+            skill
+          },
+          corsHeaders
+        );
+
+      } catch (error) {
+        return json(
+          res,
+          400,
+          {
+            error:
+              error.message
+          },
+          corsHeaders
+        );
+      }
+    }
+
 // ============================================================
 // BRAIN REGISTER
 // ============================================================
@@ -5092,7 +5370,7 @@ async function handler(
           '*',
 
         'Access-Control-Allow-Methods':
-          'GET,POST,OPTIONS',
+  'GET,POST,PATCH,DELETE,OPTIONS',
 
         'Access-Control-Allow-Headers':
           'Content-Type, X-Brain-Secret, Authorization',

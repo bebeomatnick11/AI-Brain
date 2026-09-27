@@ -25,12 +25,28 @@
  *      ↓
  * AgentLoop
  *
+ * Media / Spatial:
+ *
+ * image_generation
+ *      ↓
+ * image.generate
+ *
+ * video_generation
+ *      ↓
+ * video.generate
+ *
+ * spatial_analysis
+ *      ↓
+ * spatial.analyze
+ *
  * ============================================================
  */
 
 class Planner {
 
-  constructor(capabilityRegistry = null) {
+  constructor(
+    capabilityRegistry = null
+  ) {
 
     this.capabilityRegistry =
       capabilityRegistry || null;
@@ -42,26 +58,11 @@ class Planner {
    * ----------------------------------------------------------
    * createPlan
    * ----------------------------------------------------------
-   *
-   * Main planning entry.
-   *
-   * Supported context:
-   *
-   * {
-   *   message,
-   *   intent,
-   *   route,
-   *   skills,
-   *   memory,
-   *   state,
-   *   capabilities,
-   *   metadata
-   * }
-   *
-   * ----------------------------------------------------------
    */
 
-  async createPlan(context = {}) {
+  async createPlan(
+    context = {}
+  ) {
 
     const message =
       String(
@@ -151,13 +152,20 @@ class Planner {
    * ----------------------------------------------------------
    */
 
-  normalizeIntent(intent = {}) {
+  normalizeIntent(
+    intent = {}
+  ) {
 
-    if (typeof intent === 'string') {
+    if (
+      typeof intent ===
+      'string'
+    ) {
 
       return {
+
         type:
           intent.toLowerCase()
+
       };
 
     }
@@ -193,7 +201,9 @@ class Planner {
    * ----------------------------------------------------------
    */
 
-  getCapabilities(context = {}) {
+  getCapabilities(
+    context = {}
+  ) {
 
     if (
       Array.isArray(
@@ -220,7 +230,8 @@ class Planner {
     try {
 
       if (
-        typeof registry.list === 'function'
+        typeof registry.list ===
+        'function'
       ) {
 
         const result =
@@ -238,7 +249,8 @@ class Planner {
 
 
       if (
-        typeof registry.getAll === 'function'
+        typeof registry.getAll ===
+        'function'
       ) {
 
         const result =
@@ -256,7 +268,8 @@ class Planner {
 
 
       if (
-        typeof registry.getCapabilities === 'function'
+        typeof registry.getCapabilities ===
+        'function'
       ) {
 
         const result =
@@ -283,7 +296,9 @@ class Planner {
 
       }
 
-    } catch (error) {
+    } catch (
+      error
+    ) {
 
       return [];
 
@@ -300,10 +315,13 @@ class Planner {
    * ----------------------------------------------------------
    */
 
-  getCapabilityName(capability) {
+  getCapabilityName(
+    capability
+  ) {
 
     if (
-      typeof capability === 'string'
+      typeof capability ===
+      'string'
     ) {
 
       return capability;
@@ -360,9 +378,11 @@ class Planner {
       capability => {
 
         const name =
-          this.getCapabilityName(
-            capability
-          ).toLowerCase();
+          this
+            .getCapabilityName(
+              capability
+            )
+            .toLowerCase();
 
 
         return wanted.some(
@@ -415,9 +435,11 @@ class Planner {
     ) {
 
       const name =
-        this.getCapabilityName(
-          capability
-        ).toLowerCase();
+        this
+          .getCapabilityName(
+            capability
+          )
+          .toLowerCase();
 
 
       const match =
@@ -472,7 +494,7 @@ class Planner {
       case 'web':
       case 'search': {
 
-        if (
+        const hasWebSearch =
           this.hasCapability(
             availableCapabilities,
             [
@@ -480,36 +502,23 @@ class Planner {
               'web',
               'research'
             ]
+          );
+
+
+        actions.push(
+          this.createAction(
+            'web.search',
+            {
+              query:
+                message
+            },
+            {
+              optional:
+                !hasWebSearch
+            }
           )
-        ) {
+        );
 
-          actions.push(
-            this.createAction(
-              'web.search',
-              {
-                query:
-                  message
-              }
-            )
-          );
-
-        } else {
-
-          actions.push(
-            this.createAction(
-              'web.search',
-              {
-                query:
-                  message
-              },
-              {
-                optional:
-                  true
-              }
-            )
-          );
-
-        }
 
         break;
       }
@@ -523,7 +532,7 @@ class Planner {
       case 'remember':
       case 'recall': {
 
-        if (
+        const hasMemory =
           this.hasCapability(
             availableCapabilities,
             [
@@ -531,36 +540,23 @@ class Planner {
               'memory',
               'memory.search'
             ]
+          );
+
+
+        actions.push(
+          this.createAction(
+            'memory.retrieve',
+            {
+              query:
+                message
+            },
+            {
+              optional:
+                !hasMemory
+            }
           )
-        ) {
+        );
 
-          actions.push(
-            this.createAction(
-              'memory.retrieve',
-              {
-                query:
-                  message
-              }
-            )
-          );
-
-        } else {
-
-          actions.push(
-            this.createAction(
-              'memory.retrieve',
-              {
-                query:
-                  message
-              },
-              {
-                optional:
-                  true
-              }
-            )
-          );
-
-        }
 
         break;
       }
@@ -574,7 +570,7 @@ class Planner {
       case 'coding':
       case 'programming': {
 
-        if (
+        const hasWorkspace =
           this.hasCapability(
             availableCapabilities,
             [
@@ -582,36 +578,22 @@ class Planner {
               'workspace',
               'code'
             ]
+          );
+
+
+        actions.push(
+          this.createAction(
+            'workspace.inspect',
+            {
+              query:
+                message
+            },
+            {
+              optional:
+                !hasWorkspace
+            }
           )
-        ) {
-
-          actions.push(
-            this.createAction(
-              'workspace.inspect',
-              {
-                query:
-                  message
-              }
-            )
-          );
-
-        } else {
-
-          actions.push(
-            this.createAction(
-              'workspace.inspect',
-              {
-                query:
-                  message
-              },
-              {
-                optional:
-                  true
-              }
-            )
-          );
-
-        }
+        );
 
 
         actions.push(
@@ -774,6 +756,136 @@ class Planner {
 
 
       // ======================================================
+      // IMAGE GENERATION
+      // ======================================================
+
+      case 'image_generation':
+      case 'image':
+      case 'generate_image': {
+
+        const hasImageGeneration =
+          this.hasCapability(
+            availableCapabilities,
+            [
+              'image.generate',
+              'image_generation',
+              'image'
+            ]
+          );
+
+
+        actions.push(
+          this.createAction(
+            'image.generate',
+            {
+              prompt:
+                message,
+
+              options:
+                context.imageOptions ||
+                context.mediaOptions ||
+                {}
+            },
+            {
+              optional:
+                !hasImageGeneration
+            }
+          )
+        );
+
+
+        break;
+      }
+
+
+      // ======================================================
+      // VIDEO GENERATION
+      // ======================================================
+
+      case 'video_generation':
+      case 'video':
+      case 'generate_video': {
+
+        const hasVideoGeneration =
+          this.hasCapability(
+            availableCapabilities,
+            [
+              'video.generate',
+              'video_generation',
+              'video'
+            ]
+          );
+
+
+        actions.push(
+          this.createAction(
+            'video.generate',
+            {
+              prompt:
+                message,
+
+              options:
+                context.videoOptions ||
+                context.mediaOptions ||
+                {}
+            },
+            {
+              optional:
+                !hasVideoGeneration
+            }
+          )
+        );
+
+
+        break;
+      }
+
+
+      // ======================================================
+      // SPATIAL ANALYSIS
+      // ======================================================
+
+      case 'spatial_analysis':
+      case 'spatial':
+      case 'scene_analysis':
+      case '3d_analysis': {
+
+        const hasSpatialAnalysis =
+          this.hasCapability(
+            availableCapabilities,
+            [
+              'spatial.analyze',
+              'spatial_analysis',
+              'spatial',
+              'scene.analyze'
+            ]
+          );
+
+
+        actions.push(
+          this.createAction(
+            'spatial.analyze',
+            {
+              scene:
+                context.scene ||
+                {},
+
+              query:
+                message
+            },
+            {
+              optional:
+                !hasSpatialAnalysis
+            }
+          )
+        );
+
+
+        break;
+      }
+
+
+      // ======================================================
       // NAVIGATE
       // ======================================================
 
@@ -793,6 +905,7 @@ class Planner {
             }
           )
         );
+
 
         break;
       }
@@ -819,6 +932,7 @@ class Planner {
           )
         );
 
+
         break;
       }
 
@@ -843,6 +957,7 @@ class Planner {
             }
           )
         );
+
 
         break;
       }
@@ -893,7 +1008,9 @@ class Planner {
    * ----------------------------------------------------------
    */
 
-  deduplicateActions(actions) {
+  deduplicateActions(
+    actions
+  ) {
 
     const seen =
       new Set();
@@ -903,7 +1020,9 @@ class Planner {
       action => {
 
         const key =
-          `${action.type}:${JSON.stringify(action.input || {})}`;
+          `${action.type}:${JSON.stringify(
+            action.input || {}
+          )}`;
 
 
         if (
@@ -1001,6 +1120,17 @@ class Planner {
 
 
     if (
+      intent.type === 'image_generation' ||
+      intent.type === 'video_generation' ||
+      intent.type === 'spatial_analysis'
+    ) {
+
+      score += 1;
+
+    }
+
+
+    if (
       score >= 3
     ) {
 
@@ -1080,6 +1210,28 @@ class Planner {
     ) {
 
       return true;
+
+    }
+
+
+    /*
+     * Media generation does not automatically require
+     * an LLM response. The media capability itself can
+     * execute the requested operation.
+     */
+
+    if (
+      intent.type ===
+        'image_generation' ||
+
+      intent.type ===
+        'video_generation' ||
+
+      intent.type ===
+        'spatial_analysis'
+    ) {
+
+      return false;
 
     }
 

@@ -1,51 +1,111 @@
-const MiniAgent =
-  require("./MiniAgent");
+'use strict';
 
+function shouldUseMiniAgent(
+  intent,
+  context = {}
+) {
+  const complex =
+    context.complexity === 'high';
+
+  const steps =
+    context.estimatedSteps || 1;
+
+  if (complex) {
+    return false;
+  }
+
+  if (steps > 4) {
+    return false;
+  }
+
+  return [
+    'search',
+    'workspace',
+    'memory',
+    'simple_analysis',
+    'simple_tool'
+  ].includes(intent);
+}
 
 class MiniAgentManager {
 
   constructor(options = {}) {
 
-    this.options =
-      options;
+    this.MiniAgent =
+      options.MiniAgent;
+
+    this.capabilityRouter =
+      options.capabilityRouter;
 
     this.maxConcurrent =
-      options.maxConcurrent ??
-      4;
+      options.maxConcurrent || 4;
 
-    this.running =
-      new Map();
+    this.active =
+      0;
 
     this.queue =
       [];
-
-    this.completed =
-      new Map();
-
-    this.agent =
-      options.agent ||
-      new MiniAgent(options);
   }
 
+  shouldUseMiniAgent(
+    intent,
+    context = {}
+  ) {
+    return shouldUseMiniAgent(
+      intent,
+      context
+    );
+  }
 
-  async run(input = {}) {
+  async run(options = {}) {
+
+    const {
+      goal,
+      userId,
+      sessionId,
+      context = {}
+    } = options;
+
+    const intent =
+      context.intent ||
+      'simple_tool';
 
     if (
-      this.running.size <
-      this.maxConcurrent
+      !this.shouldUseMiniAgent(
+        intent,
+        context
+      )
     ) {
-
-      return await this.start(
-        input
-      );
+      return {
+        success: false,
+        skipped: true,
+        reason:
+          'Mini Agent not suitable for this task'
+      };
     }
 
+    return await this.enqueue({
+      goal,
+      userId,
+      sessionId,
+      context
+    });
+  }
+
+  async enqueue(task) {
+
+    if (
+      this.active <
+      this.maxConcurrent
+    ) {
+      return await this.execute(task);
+    }
 
     return await new Promise(
       (resolve, reject) => {
 
         this.queue.push({
-          input,
+          task,
           resolve,
           reject
         });
@@ -53,115 +113,82 @@ class MiniAgentManager {
     );
   }
 
+  async execute(task) {
 
-  async start(input) {
-
-    const id =
-      input.id ||
-      `mini-${Date.now()}-${Math.random()
-        .toString(36)
-        .slice(2, 8)}`;
-
-
-    this.running.set(
-      id,
-      {
-        startedAt:
-          Date.now(),
-
-        input
-      }
-    );
-
+    this.active++;
 
     try {
 
-      const result =
-        await this.agent.run({
-          ...input,
-          id
+      const agent =
+        new this.MiniAgent({
+          capabilityRouter:
+            this.capabilityRouter,
+
+          maxSteps:
+            task.context.maxSteps || 6,
+
+          maxRetries:
+            task.context.maxRetries || 2,
+
+          timeoutMs:
+            task.context.timeoutMs || 15000
         });
 
+      return await agent.run({
+        goal:
+          task.goal,
 
-      this.completed.set(
-        id,
-        result
-      );
+        userId:
+          task.userId,
 
+        sessionId:
+          task.sessionId,
 
-      return result;
+        context:
+          task.context
+      });
 
     } finally {
 
-      this.running.delete(
-        id
-      );
+      this.active--;
 
       this.processQueue();
     }
   }
 
+  async processQueue() {
 
-  processQueue() {
-
-    while (
-      this.queue.length > 0 &&
-      this.running.size <
-        this.maxConcurrent
-    ) {
-
-      const item =
-        this.queue.shift();
-
-
-      this.start(
-        item.input
-      )
-        .then(item.resolve)
-        .catch(item.reject);
+    if (!this.queue.length) {
+      return;
     }
-  }
-
-
-  getStatus() {
-
-    return {
-      running:
-        this.running.size,
-
-      queued:
-        this.queue.length,
-
-      completed:
-        this.completed.size,
-
-      maxConcurrent:
-        this.maxConcurrent
-    };
-  }
-
-
-  get(id) {
 
     if (
-      this.running.has(id)
+      this.active >=
+      this.maxConcurrent
     ) {
-      return {
-        status:
-          "running",
-
-        ...this.running.get(id)
-      };
+      return;
     }
 
+    const item =
+      this.queue.shift();
 
-    return (
-      this.completed.get(id) ||
-      null
-    );
+    try {
+
+      const result =
+        await this.execute(
+          item.task
+        );
+
+      item.resolve(result);
+
+    } catch (error) {
+
+      item.reject(error);
+    }
   }
 }
 
-
-module.exports =
-  MiniAgentManager;
+module.exports = {
+  MiniAgentManager,
+  shouldUseMiniAgent
+};

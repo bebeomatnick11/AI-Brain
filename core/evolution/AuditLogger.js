@@ -1,105 +1,99 @@
 "use strict";
 
-const RISK_LEVELS = Object.freeze({
-    LOW: "LOW",
-    MEDIUM: "MEDIUM",
-    HIGH: "HIGH",
-    CRITICAL: "CRITICAL"
-});
+const crypto = require("crypto");
 
-const CRITICAL_AREAS = new Set([
-    "authentication",
-    "authorization",
-    "permission",
-    "approval",
-    "sandbox",
-    "secret",
-    "secret-vault",
-    "core-runtime",
-    "security-policy",
-    "deployment"
-]);
+class AuditLogger {
 
-const HIGH_AREAS = new Set([
-    "agent-loop",
-    "brain-runtime",
-    "capability-router",
-    "provider-router",
-    "memory",
-    "database",
-    "skill-engine",
-    "version-manager"
-]);
-
-class RiskEngine {
-
-    classify(change = {}) {
-
-        const areas = Array.isArray(change.areas)
-            ? change.areas.map(String)
-            : [];
-
-        if (
-            areas.some(area => CRITICAL_AREAS.has(area)) ||
-            change.modifiesSecurity === true ||
-            change.modifiesAuth === true ||
-            change.modifiesSandbox === true ||
-            change.modifiesSecrets === true
-        ) {
-            return RISK_LEVELS.CRITICAL;
-        }
-
-        if (
-            areas.some(area => HIGH_AREAS.has(area)) ||
-            change.affectsCore === true
-        ) {
-            return RISK_LEVELS.HIGH;
-        }
-
-        if (
-            change.affectsSkill === true ||
-            change.affectsBackend === true
-        ) {
-            return RISK_LEVELS.MEDIUM;
-        }
-
-        return RISK_LEVELS.LOW;
+    constructor(options = {}) {
+        this.db = options.db || null;
+        this.logger = options.logger || console;
     }
 
-    requiresOwnerApproval(level) {
-        return (
-            level === RISK_LEVELS.HIGH ||
-            level === RISK_LEVELS.CRITICAL
+    async record(type, payload = {}, actor = {}) {
+
+        const event = {
+            id: crypto.randomUUID(),
+            type,
+            actorId: actor.id || null,
+            actorRole: actor.role || null,
+            payload: sanitize(payload),
+            createdAt: new Date().toISOString()
+        };
+
+        this.logger.info(
+            `[AUDIT] ${event.type} ${event.id}`
         );
-    }
 
-    requiresExtraReview(level) {
-        return level === RISK_LEVELS.CRITICAL;
-    }
+        if (this.db?.query) {
 
-    describe(level) {
-
-        switch (level) {
-
-            case RISK_LEVELS.LOW:
-                return "Low-risk change.";
-
-            case RISK_LEVELS.MEDIUM:
-                return "May affect a Skill or backend behavior.";
-
-            case RISK_LEVELS.HIGH:
-                return "May affect the Global Brain or connected Agents.";
-
-            case RISK_LEVELS.CRITICAL:
-                return "May affect authentication, permissions, sandbox, secrets, deployment or core security.";
-
-            default:
-                return "Unknown risk.";
+            await this.db.query(
+                `
+                INSERT INTO audit_logs
+                (
+                    id,
+                    event_type,
+                    actor_id,
+                    actor_role,
+                    payload,
+                    created_at
+                )
+                VALUES ($1,$2,$3,$4,$5,NOW())
+                `,
+                [
+                    event.id,
+                    event.type,
+                    event.actorId,
+                    event.actorRole,
+                    JSON.stringify(event.payload)
+                ]
+            );
         }
+
+        return event;
     }
 }
 
+function sanitize(value) {
+
+    if (value === null || value === undefined) {
+        return value;
+    }
+
+    if (typeof value === "string") {
+
+        return value
+            .replace(
+                /(api[_-]?key|token|secret|password|authorization)\s*[:=]\s*["']?[^"',\s}]+/gi,
+                "$1=[REDACTED]"
+            );
+    }
+
+    if (Array.isArray(value)) {
+        return value.map(sanitize);
+    }
+
+    if (typeof value === "object") {
+
+        const result = {};
+
+        for (const [key, item] of Object.entries(value)) {
+
+            if (
+                /api[_-]?key|token|secret|password|authorization/i
+                    .test(key)
+            ) {
+                result[key] = "[REDACTED]";
+            } else {
+                result[key] = sanitize(item);
+            }
+        }
+
+        return result;
+    }
+
+    return value;
+}
+
 module.exports = {
-    RiskEngine,
-    RISK_LEVELS
+    AuditLogger
 };

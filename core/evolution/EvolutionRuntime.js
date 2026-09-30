@@ -72,6 +72,83 @@ class EvolutionRuntime {
             options.logger ||
             console;
 
+        this.skillValidator =
+    new SkillValidator();
+
+this.skillSandbox =
+    new SkillSandbox();
+
+this.skillExecutor =
+    new SkillExecutionManager({
+
+        validator:
+            this.skillValidator,
+
+        sandbox:
+            this.skillSandbox,
+
+        errorCenter:
+            this.errorCenter,
+
+        audit:
+            this.audit
+    });
+
+this.testEngine =
+    new TestEngine({
+
+        skillExecutor:
+            this.skillExecutor,
+
+        audit:
+            this.audit
+    });
+
+this.regressionEngine =
+    new RegressionEngine({
+
+        testEngine:
+            this.testEngine,
+
+        audit:
+            this.audit
+    });
+
+this.errorDiagnoser =
+    new ErrorDiagnoser({
+
+        audit:
+            this.audit
+    });
+
+this.codeRepair =
+    new CodeRepairEngine({
+
+        workspace:
+            this.modification.workspace,
+
+        diagnoser:
+            this.errorDiagnoser,
+
+        audit:
+            this.audit
+    });
+
+this.codingLoop =
+    new CodingVerificationLoop({
+
+        verifier:
+            this.modification.verifier,
+
+        diagnoser:
+            this.errorDiagnoser,
+
+        repairEngine:
+            this.codeRepair,
+
+        audit:
+            this.audit
+    });
         this.riskEngine =
             new RiskEngine();
 

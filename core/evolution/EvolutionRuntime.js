@@ -24,6 +24,38 @@ const {
     ExperimentLab
 } = require("./ExperimentLab");
 
+const {
+    SkillValidator
+} = require("../../skills/SkillValidator");
+
+const {
+    SkillSandbox
+} = require("../../skills/SkillSandbox");
+
+const {
+    SkillExecutionManager
+} = require("../../skills/SkillExecutionManager");
+
+const {
+    TestEngine
+} = require("./TestEngine");
+
+const {
+    RegressionEngine
+} = require("./RegressionEngine");
+
+const {
+    ErrorDiagnoser
+} = require("./ErrorDiagnoser");
+
+const {
+    CodeRepairEngine
+} = require("./CodeRepairEngine");
+
+const {
+    CodingVerificationLoop
+} = require("./CodingVerificationLoop");
+
 class EvolutionRuntime {
 
     constructor(options = {}) {

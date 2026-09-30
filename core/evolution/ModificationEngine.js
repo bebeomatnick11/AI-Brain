@@ -53,14 +53,18 @@ class ModificationEngine {
             new DiffEngine();
 
         this.verifier =
-            options.verifier ||
-            new VerificationController({
-                audit: this.audit,
-                testRunner:
-                    options.testRunner,
-                regressionRunner:
-                    options.regressionRunner
-            });
+    options.verifier ||
+    new VerificationController({
+
+        audit:
+            this.audit,
+
+        testRunner:
+            options.testRunner,
+
+        regressionRunner:
+            options.regressionRunner
+    });
 
         this.deployment =
             options.deployment ||

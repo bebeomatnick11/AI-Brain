@@ -19,6 +19,137 @@ function registerEvolutionRoutes(
      */
 
     app.post(
+    "/api/evolution/skill-builder/test/:id",
+    requireAuth,
+    requirePermission("skill.run"),
+    async (req, res) => {
+
+        try {
+
+            const skill =
+                runtime.skills.get(
+                    req.params.id
+                );
+
+            if (!skill) {
+
+                return res
+                    .status(404)
+                    .json({
+                        error:
+                            "SKILL_NOT_FOUND"
+                    });
+            }
+
+            const result =
+                await runtime
+                    .skillBuildPipeline
+                    .test(
+                        skill,
+                        req.body?.inputs ||
+                        [{}],
+                        req.user
+                    );
+
+            res.json(result);
+
+        } catch (error) {
+
+            res.status(400).json({
+                error:
+                    error.message
+            });
+        }
+    }
+);
+    app.post(
+    "/api/evolution/coding/repair",
+    requireAuth,
+    requirePermission("change.propose"),
+    async (req, res) => {
+
+        try {
+
+            const result =
+                await runtime
+                    .codingPipeline
+                    .run(
+                        req.body || {},
+                        req.user
+                    );
+
+            res.json(result);
+
+        } catch (error) {
+
+            res.status(400).json({
+                error:
+                    error.message
+            });
+        }
+    }
+);
+    app.post(
+    "/api/evolution/skill-builder/approve",
+    requireAuth,
+    requirePermission("skill.create"),
+    async (req, res) => {
+
+        try {
+
+            const skill =
+                await runtime
+                    .skillBuildPipeline
+                    .approve(
+                        req.body,
+                        req.user
+                    );
+
+            res.status(201).json(
+                skill
+            );
+
+        } catch (error) {
+
+            res.status(400).json({
+                error:
+                    error.message
+            });
+        }
+    }
+);
+    app.post(
+    "/api/evolution/skill-builder",
+    requireAuth,
+    requirePermission("skill.create"),
+    async (req, res) => {
+
+        try {
+
+            const result =
+                await runtime
+                    .skillBuildPipeline
+                    .build(
+                        req.body?.request,
+                        req.body?.context ||
+                        {},
+                        req.user
+                    );
+
+            res.status(201).json(
+                result
+            );
+
+        } catch (error) {
+
+            res.status(400).json({
+                error:
+                    error.message
+            });
+        }
+    }
+);
+    app.post(
     "/api/evolution/workspaces/:id/coding-loop",
     requireAuth,
     requirePermission("change.propose"),

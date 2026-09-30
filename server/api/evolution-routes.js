@@ -19,6 +19,61 @@ function registerEvolutionRoutes(
      */
 
     app.post(
+    "/api/evolution/workspaces/:id/coding-loop",
+    requireAuth,
+    requirePermission("change.propose"),
+    async (req, res) => {
+
+        try {
+
+            const workspace =
+                runtime.modification
+                    .workspace
+                    .get(
+                        req.params.id
+                    );
+
+            if (!workspace) {
+
+                return res
+                    .status(404)
+                    .json({
+                        error:
+                            "WORKSPACE_NOT_FOUND"
+                    });
+            }
+
+            /*
+             * Repairer thực tế sẽ được
+             * nối với Coding Agent ở Pack 4.
+             *
+             * Hiện tại không giả vờ rằng
+             * AI repair đã tồn tại.
+             */
+
+            const result =
+                await runtime
+                    .codingLoop
+                    .run(
+                        workspace,
+                        req.body ||
+                        {},
+                        null,
+                        req.user
+                    );
+
+            res.json(result);
+
+        } catch (error) {
+
+            res.status(400).json({
+                error:
+                    error.message
+            });
+        }
+    }
+);
+    app.post(
     "/api/evolution/skills/:id/run",
     requireAuth,
     requirePermission("skill.run"),

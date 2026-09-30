@@ -86,6 +86,18 @@ const {
     "../../skills/builder/SkillBuildPipeline"
 );
 
+const {
+    CodingAgent
+} = require(
+    "../../agent/mini/coding/CodingAgent"
+);
+
+const {
+    CodingPipeline
+} = require(
+    "../../agent/mini/coding/CodingPipeline"
+);
+
 class EvolutionRuntime {
 
     constructor(options = {}) {
@@ -281,6 +293,44 @@ this.skillBuildPipeline =
 
         skillExecutor:
             this.skillExecutor,
+
+        audit:
+            this.audit
+    });
+        this.codingAgent =
+    new CodingAgent({
+
+        planner:
+            undefined,
+
+        analyzer:
+            undefined,
+
+        modification:
+            this.modification,
+
+        verificationLoop:
+            this.codingLoop,
+
+        provider:
+            options.codingProvider,
+
+        audit:
+            this.audit
+    });
+
+
+this.codingPipeline =
+    new CodingPipeline({
+
+        agent:
+            this.codingAgent,
+
+        modification:
+            this.modification,
+
+        verificationLoop:
+            this.codingLoop,
 
         audit:
             this.audit

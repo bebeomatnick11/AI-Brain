@@ -56,6 +56,36 @@ const {
     CodingVerificationLoop
 } = require("./CodingVerificationLoop");
 
+const {
+    NaturalLanguageSkillBuilder
+} = require(
+    "../../skills/builder/NaturalLanguageSkillBuilder"
+);
+
+const {
+    SkillArchitecturePlanner
+} = require(
+    "../../skills/builder/SkillArchitecturePlanner"
+);
+
+const {
+    SkillGenerator
+} = require(
+    "../../skills/builder/SkillGenerator"
+);
+
+const {
+    SkillPreview
+} = require(
+    "../../skills/builder/SkillPreview"
+);
+
+const {
+    SkillBuildPipeline
+} = require(
+    "../../skills/builder/SkillBuildPipeline"
+);
+
 class EvolutionRuntime {
 
     constructor(options = {}) {
@@ -187,6 +217,74 @@ this.codingLoop =
                 skillRegistry:
                     this.skills
             });
+        this.skillArchitecturePlanner =
+    new SkillArchitecturePlanner({
+
+        capabilityRegistry:
+            options.capabilityRegistry,
+
+        audit:
+            this.audit
+    });
+
+
+this.skillGenerator =
+    new SkillGenerator({
+
+        provider:
+            options.skillGenerationProvider
+    });
+
+
+this.skillPreview =
+    new SkillPreview({
+
+        audit:
+            this.audit
+    });
+
+
+this.skillBuilder =
+    new NaturalLanguageSkillBuilder({
+
+        intentEngine:
+            options.intentEngine,
+
+        planner:
+            options.planner,
+
+        architecturePlanner:
+            this.skillArchitecturePlanner,
+
+        generator:
+            this.skillGenerator,
+
+        validator:
+            this.skillValidator,
+
+        preview:
+            this.skillPreview,
+
+        audit:
+            this.audit
+    });
+
+
+this.skillBuildPipeline =
+    new SkillBuildPipeline({
+
+        builder:
+            this.skillBuilder,
+
+        skillRegistry:
+            this.skills,
+
+        skillExecutor:
+            this.skillExecutor,
+
+        audit:
+            this.audit
+    });
     }
 
     async reportError(error) {

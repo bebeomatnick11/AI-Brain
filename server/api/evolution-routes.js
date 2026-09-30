@@ -19,6 +19,50 @@ function registerEvolutionRoutes(
      */
 
     app.post(
+    "/api/evolution/skills/:id/run",
+    requireAuth,
+    requirePermission("skill.run"),
+    async (req, res) => {
+
+        try {
+
+            const skill =
+                runtime.skills.get(
+                    req.params.id
+                );
+
+            if (!skill) {
+
+                return res
+                    .status(404)
+                    .json({
+                        error:
+                            "SKILL_NOT_FOUND"
+                    });
+            }
+
+            const result =
+                await runtime
+                    .skillExecutor
+                    .run(
+                        skill,
+                        req.body?.input ||
+                        {},
+                        req.user
+                    );
+
+            res.json(result);
+
+        } catch (error) {
+
+            res.status(400).json({
+                error:
+                    error.message
+            });
+        }
+    }
+);
+    app.post(
         "/api/evolution/errors",
         requireAuth,
         requirePermission("error.report"),

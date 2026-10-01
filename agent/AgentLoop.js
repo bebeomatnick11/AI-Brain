@@ -1,57 +1,420 @@
 'use strict';
 
 /**
- * Astra Brain Agent Loop
+ * ============================================================
+ * ASTRA BRAIN
+ * Agent Loop
+ * ============================================================
  *
  * Không chứa API key.
  * Không phụ thuộc provider cụ thể.
+ *
+ * Flow:
+ *
+ * Observe
+ *    ↓
+ * Intent
+ *    ↓
+ * Memory
+ *    ↓
+ * Plan
+ *    ↓
+ * Execute
+ *    ↓
+ * Verify
+ *    ↓
+ * Respond
+ *    ↓
+ * Learn / Self State
+ *
+ *
+ * Capability registration:
+ *
+ * imageTool
+ *    ↓
+ * image.generate
+ *    ↓
+ * CapabilityRouter
+ *
+ * videoTool
+ *    ↓
+ * video.generate
+ *
+ * spatialTool
+ *    ↓
+ * spatial.analyze
+ *
+ * ============================================================
  */
 
 class AgentLoop {
 
   constructor(options = {}) {
 
+    // ========================================================
+    // CORE SYSTEMS
+    // ========================================================
+
     this.intentEngine =
       options.intentEngine;
+
 
     this.planner =
       options.planner;
 
+
     this.worldModel =
       options.worldModel;
+
 
     this.actionSystem =
       options.actionSystem;
 
+
     this.observationEngine =
       options.observationEngine;
+
 
     this.memory =
       options.memory;
 
+
+    // ========================================================
+    // CAPABILITY SYSTEM
+    // ========================================================
+
     this.capabilityRouter =
       options.capabilityRouter;
+
+
+    this.capabilityRegistry =
+      options.capabilityRegistry ||
+      null;
+
+
+    // ========================================================
+    // PROVIDERS
+    // ========================================================
 
     this.providerRouter =
       options.providerRouter;
 
+
+    // ========================================================
+    // VERIFICATION / SELF STATE
+    // ========================================================
+
     this.verifier =
       options.verifier;
+
 
     this.selfState =
       options.selfState;
 
+
+    // ========================================================
+    // OPTIONAL MEDIA / SPATIAL TOOLS
+    // ========================================================
+
+    this.imageTool =
+      options.imageTool ||
+      null;
+
+
+    this.videoTool =
+      options.videoTool ||
+      null;
+
+
+    this.spatialTool =
+      options.spatialTool ||
+      null;
+
+
+    // ========================================================
+    // LIMITS
+    // ========================================================
+
     this.maxSteps =
-      Number(options.maxSteps || 8);
+      Number(
+        options.maxSteps || 8
+      );
+
+
+    // ========================================================
+    // REGISTER CAPABILITIES
+    // ========================================================
+
+    this.registerCapabilities();
+
   }
 
 
-  async run(input = {}) {
+  /**
+   * ==========================================================
+   * registerCapabilities
+   * ==========================================================
+   *
+   * Registers optional capabilities into CapabilityRegistry.
+   *
+   * Existing capabilities are not overwritten unless the
+   * registry implementation itself allows it.
+   *
+   * ==========================================================
+   */
+
+  registerCapabilities() {
+
+    const registry =
+      this.capabilityRegistry;
+
+
+    if (!registry) {
+      return;
+    }
+
+
+    // ========================================================
+    // IMAGE GENERATION
+    // ========================================================
+
+    if (
+      this.imageTool &&
+      typeof this.imageTool.execute ===
+        'function'
+    ) {
+
+      this.registerCapability(
+        registry,
+        'image.generate',
+        {
+
+          description:
+            'Generate spatially planned images.',
+
+          enabled:
+            true,
+
+          available:
+            true,
+
+          backend:
+            'image-provider',
+
+          execute:
+            this.imageTool.execute.bind(
+              this.imageTool
+            ),
+
+          metadata: {
+
+            category:
+              'generation',
+
+            output:
+              'image'
+          }
+        }
+      );
+    }
+
+
+    // ========================================================
+    // VIDEO GENERATION
+    // ========================================================
+
+    if (
+      this.videoTool &&
+      typeof this.videoTool.execute ===
+        'function'
+    ) {
+
+      this.registerCapability(
+        registry,
+        'video.generate',
+        {
+
+          description:
+            'Generate videos from planned prompts.',
+
+          enabled:
+            true,
+
+          available:
+            true,
+
+          backend:
+            'video-provider',
+
+          execute:
+            this.videoTool.execute.bind(
+              this.videoTool
+            ),
+
+          metadata: {
+
+            category:
+              'generation',
+
+            output:
+              'video'
+          }
+        }
+      );
+    }
+
+
+    // ========================================================
+    // SPATIAL ANALYSIS
+    // ========================================================
+
+    if (
+      this.spatialTool &&
+      typeof this.spatialTool.execute ===
+        'function'
+    ) {
+
+      this.registerCapability(
+        registry,
+        'spatial.analyze',
+        {
+
+          description:
+            'Analyze spatial scenes, geometry, lighting and camera information.',
+
+          enabled:
+            true,
+
+          available:
+            true,
+
+          backend:
+            'spatial-provider',
+
+          execute:
+            this.spatialTool.execute.bind(
+              this.spatialTool
+            ),
+
+          metadata: {
+
+            category:
+              'analysis',
+
+            output:
+              'spatial-analysis'
+          }
+        }
+      );
+    }
+
+  }
+
+
+  /**
+   * ==========================================================
+   * registerCapability
+   * ==========================================================
+   *
+   * Supports common CapabilityRegistry APIs.
+   *
+   * Preferred:
+   *
+   * registry.register(
+   *   name,
+   *   definition
+   * )
+   *
+   * Also supports:
+   *
+   * registry.add(...)
+   * registry.registerCapability(...)
+   *
+   * ==========================================================
+   */
+
+  registerCapability(
+    registry,
+    name,
+    definition
+  ) {
+
+    try {
+
+      if (
+        typeof registry.register ===
+        'function'
+      ) {
+
+        registry.register(
+          name,
+          definition
+        );
+
+        return true;
+      }
+
+
+      if (
+        typeof registry.registerCapability ===
+        'function'
+      ) {
+
+        registry.registerCapability(
+          name,
+          definition
+        );
+
+        return true;
+      }
+
+
+      if (
+        typeof registry.add ===
+        'function'
+      ) {
+
+        registry.add(
+          name,
+          definition
+        );
+
+        return true;
+      }
+
+    } catch (error) {
+
+      /*
+       * Registration failure must not crash the
+       * entire AgentLoop.
+       *
+       * The capability will simply be unavailable.
+       */
+
+      return false;
+    }
+
+
+    return false;
+  }
+
+
+  /**
+   * ==========================================================
+   * run
+   * ==========================================================
+   */
+
+  async run(
+    input = {}
+  ) {
 
     const startedAt =
       Date.now();
 
+
     const state = {
+
       id:
         input.requestId ||
         `run-${Date.now()}-${Math.random()
@@ -59,13 +422,17 @@ class AgentLoop {
           .slice(2, 8)}`,
 
       brainId:
-        input.brainId || null,
+        input.brainId ||
+        null,
 
       playerId:
-        input.playerId || null,
+        input.playerId ||
+        null,
 
       message:
-        String(input.message || ''),
+        String(
+          input.message || ''
+        ),
 
       observation:
         null,
@@ -95,6 +462,7 @@ class AgentLoop {
         [],
 
       startedAt
+
     };
 
 
@@ -106,7 +474,8 @@ class AgentLoop {
 
       if (
         this.observationEngine &&
-        typeof this.observationEngine.observe === 'function'
+        typeof this.observationEngine.observe ===
+          'function'
       ) {
 
         state.observation =
@@ -123,7 +492,8 @@ class AgentLoop {
 
       if (
         this.intentEngine &&
-        typeof this.intentEngine.detect === 'function'
+        typeof this.intentEngine.detect ===
+          'function'
       ) {
 
         state.intent =
@@ -135,8 +505,13 @@ class AgentLoop {
       } else {
 
         state.intent = {
-          type: 'chat',
-          confidence: 0.2
+
+          type:
+            'chat',
+
+          confidence:
+            0.2
+
         };
       }
 
@@ -147,7 +522,8 @@ class AgentLoop {
 
       if (
         this.memory &&
-        typeof this.memory.retrieve === 'function'
+        typeof this.memory.retrieve ===
+          'function'
       ) {
 
         try {
@@ -156,6 +532,7 @@ class AgentLoop {
             await this.memory.retrieve(
               state.message,
               {
+
                 brainId:
                   state.brainId,
 
@@ -164,14 +541,20 @@ class AgentLoop {
 
                 limit:
                   12
+
               }
             ) || [];
 
         } catch (error) {
 
           state.errors.push({
-            stage: 'memory',
-            message: error.message
+
+            stage:
+              'memory',
+
+            message:
+              error.message
+
           });
         }
       }
@@ -183,11 +566,13 @@ class AgentLoop {
 
       if (
         this.planner &&
-        typeof this.planner.createPlan === 'function'
+        typeof this.planner.createPlan ===
+          'function'
       ) {
 
         state.plan =
           await this.planner.createPlan({
+
             message:
               state.message,
 
@@ -201,7 +586,11 @@ class AgentLoop {
               state.memories,
 
             brainId:
-              state.brainId
+              state.brainId,
+
+            capabilities:
+              this.getAvailableCapabilities()
+
           });
       }
 
@@ -211,7 +600,9 @@ class AgentLoop {
       // ======================================================
 
       const actions =
-        Array.isArray(state.plan?.actions)
+        Array.isArray(
+          state.plan?.actions
+        )
           ? state.plan.actions
           : [];
 
@@ -236,9 +627,11 @@ class AgentLoop {
               state
             );
 
+
           state.actions.push(
             action
           );
+
 
           state.results.push(
             result
@@ -247,14 +640,26 @@ class AgentLoop {
         } catch (error) {
 
           state.errors.push({
-            stage: 'action',
+
+            stage:
+              'action',
+
             action,
-            message: error.message
+
+            message:
+              error.message
+
           });
 
+
           state.results.push({
-            success: false,
-            error: error.message
+
+            success:
+              false,
+
+            error:
+              error.message
+
           });
         }
       }
@@ -266,7 +671,8 @@ class AgentLoop {
 
       if (
         this.verifier &&
-        typeof this.verifier.verify === 'function'
+        typeof this.verifier.verify ===
+          'function'
       ) {
 
         state.verification =
@@ -292,19 +698,30 @@ class AgentLoop {
 
       if (
         this.selfState &&
-        typeof this.selfState.record === 'function'
+        typeof this.selfState.record ===
+          'function'
       ) {
 
         await this.selfState.record({
+
           state,
+
           duration:
-            Date.now() - startedAt
+            Date.now() -
+            startedAt
+
         });
       }
 
 
+      // ======================================================
+      // RETURN
+      // ======================================================
+
       return {
-        success: true,
+
+        success:
+          true,
 
         requestId:
           state.id,
@@ -331,13 +748,17 @@ class AgentLoop {
           state.errors,
 
         duration:
-          Date.now() - startedAt
+          Date.now() -
+          startedAt
+
       };
 
     } catch (error) {
 
       return {
-        success: false,
+
+        success:
+          false,
 
         requestId:
           state.id,
@@ -349,10 +770,108 @@ class AgentLoop {
           error.message,
 
         state
+
       };
     }
   }
 
+
+  /**
+   * ==========================================================
+   * getAvailableCapabilities
+   * ==========================================================
+   */
+
+  getAvailableCapabilities() {
+
+    const registry =
+      this.capabilityRegistry;
+
+
+    if (!registry) {
+      return [];
+    }
+
+
+    try {
+
+      if (
+        typeof registry.list ===
+        'function'
+      ) {
+
+        const result =
+          registry.list();
+
+        if (
+          Array.isArray(result)
+        ) {
+
+          return result;
+        }
+      }
+
+
+      if (
+        typeof registry.getAll ===
+        'function'
+      ) {
+
+        const result =
+          registry.getAll();
+
+        if (
+          Array.isArray(result)
+        ) {
+
+          return result;
+        }
+      }
+
+
+      if (
+        typeof registry.getCapabilities ===
+        'function'
+      ) {
+
+        const result =
+          registry.getCapabilities();
+
+        if (
+          Array.isArray(result)
+        ) {
+
+          return result;
+        }
+      }
+
+
+      if (
+        Array.isArray(
+          registry.capabilities
+        )
+      ) {
+
+        return registry.capabilities;
+      }
+
+    } catch (
+      error
+    ) {
+
+      return [];
+    }
+
+
+    return [];
+  }
+
+
+  /**
+   * ==========================================================
+   * executeAction
+   * ==========================================================
+   */
 
   async executeAction(
     action,
@@ -360,6 +879,7 @@ class AgentLoop {
   ) {
 
     if (!action) {
+
       throw new Error(
         'Empty agent action'
       );
@@ -374,10 +894,22 @@ class AgentLoop {
       );
 
 
-    // Capability-based execution
+    if (!type) {
+
+      throw new Error(
+        'Agent action has no type'
+      );
+    }
+
+
+    // ========================================================
+    // CAPABILITY ROUTER
+    // ========================================================
+
     if (
       this.capabilityRouter &&
-      typeof this.capabilityRouter.execute === 'function'
+      typeof this.capabilityRouter.execute ===
+        'function'
     ) {
 
       return await this.capabilityRouter.execute(
@@ -388,9 +920,14 @@ class AgentLoop {
     }
 
 
+    // ========================================================
+    // ACTION SYSTEM FALLBACK
+    // ========================================================
+
     if (
       this.actionSystem &&
-      typeof this.actionSystem.execute === 'function'
+      typeof this.actionSystem.execute ===
+        'function'
     ) {
 
       return await this.actionSystem.execute(
@@ -400,25 +937,47 @@ class AgentLoop {
     }
 
 
-    return {
-      success: false,
+    // ========================================================
+    // NO EXECUTOR
+    // ========================================================
 
-      skipped: true,
+    return {
+
+      success:
+        false,
+
+      skipped:
+        true,
 
       reason:
         `No executor for action: ${type}`
+
     };
   }
 
 
-  async generateResponse(state) {
+  /**
+   * ==========================================================
+   * generateResponse
+   * ==========================================================
+   */
+
+  async generateResponse(
+    state
+  ) {
+
+    // ========================================================
+    // PROVIDER ROUTER
+    // ========================================================
 
     if (
       this.providerRouter &&
-      typeof this.providerRouter.generate === 'function'
+      typeof this.providerRouter.generate ===
+        'function'
     ) {
 
       return await this.providerRouter.generate({
+
         message:
           state.message,
 
@@ -439,11 +998,19 @@ class AgentLoop {
 
         verification:
           state.verification
+
       });
     }
 
 
+    // ========================================================
+    // NO PROVIDER FALLBACK
+    // ========================================================
+    //
     // Không giả vờ gọi AI nếu không có provider.
+    //
+    // ========================================================
+
     if (
       state.results.length > 0
     ) {
@@ -460,8 +1027,15 @@ class AgentLoop {
       'Astra đã nhận yêu cầu nhưng hiện chưa có AI provider hoạt động.'
     );
   }
+
 }
 
+
+/**
+ * ============================================================
+ * EXPORT
+ * ============================================================
+ */
 
 module.exports =
   AgentLoop;

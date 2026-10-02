@@ -1,55 +1,154 @@
 'use strict';
 
 /**
- * LanguageUnderstanding
+ * Astra Language Understanding
  *
- * Bộ phân tích ngôn ngữ nội bộ ban đầu của Astra.
- *
- * Không sử dụng:
- * - API AI
- * - model bên ngoài
- * - API key
+ * Không phải LLM.
  *
  * Nhiệm vụ:
- * - chuẩn hóa câu
- * - phát hiện intent
- * - tách token
- * - phát hiện câu hỏi
- * - phát hiện phủ định
- * - phát hiện thực thể cơ bản
- * - trích xuất từ khóa
- * - xác định cấu trúc yêu cầu
+ * - Chuẩn hóa input
+ * - Nhận diện intent
+ * - Nhận diện speech act
+ * - Trích xuất keyword
+ * - Phát hiện câu hỏi
+ * - Phát hiện phủ định
+ * - Phát hiện cảm xúc cơ bản
+ * - Nhận diện mức độ quen thuộc với chủ đề
+ *
+ * Quan trọng:
+ * Intent != Speech Act
+ *
+ * Ví dụ:
+ * "Wow script này hay thật"
+ *
+ * intent:
+ *   conversation
+ *
+ * speechAct:
+ *   PRAISE
+ *
+ * Không được biến thành:
+ *   "CREATE"
  */
 
 class LanguageUnderstanding {
   constructor(options = {}) {
-    this.minKeywordLength =
-      Number(options.minKeywordLength || 2);
+    this.maxKeywords =
+      Number(options.maxKeywords || 20);
 
-    this.stopWords = new Set(
-      options.stopWords || [
+    this.maxTokens =
+      Number(options.maxTokens || 200);
+  }
+
+  analyze(message, context = {}) {
+    const original =
+      String(message || '').trim();
+
+    const text =
+      original.toLowerCase();
+
+    const tokens =
+      this.tokenize(text);
+
+    const keywords =
+      this.extractKeywords(tokens);
+
+    const intent =
+      this.detectIntent(text);
+
+    const speechAct =
+      this.detectSpeechAct(
+        text,
+        intent
+      );
+
+    const question =
+      this.detectQuestion(text);
+
+    const negations =
+      this.detectNegations(text);
+
+    const sentiment =
+      this.detectSentiment(text);
+
+    const language =
+      this.detectLanguage(text);
+
+    const entities =
+      this.extractEntities(original);
+
+    const topic =
+      this.detectTopic(
+        text,
+        keywords
+      );
+
+    const familiarity =
+      this.detectFamiliarity(
+        text,
+        context
+      );
+
+    const urgency =
+      this.detectUrgency(text);
+
+    const modality =
+      this.detectModality(text);
+
+    return {
+      original,
+
+      normalized: text,
+
+      tokens,
+
+      keywords,
+
+      intent,
+
+      speechAct,
+
+      question,
+
+      negations,
+
+      sentiment,
+
+      language,
+
+      entities,
+
+      topic,
+
+      familiarity,
+
+      urgency,
+
+      modality,
+
+      timestamp: Date.now()
+    };
+  }
+
+  tokenize(text) {
+    return String(text || '')
+      .toLowerCase()
+      .match(/[\p{L}\p{N}_]+/gu)
+      ?.slice(0, this.maxTokens) || [];
+  }
+
+  extractKeywords(tokens) {
+    const stopWords =
+      new Set([
         'là',
         'và',
         'của',
         'cho',
-        'một',
-        'những',
-        'các',
         'tôi',
         'mình',
         'bạn',
         'anh',
         'em',
-        'để',
-        'thì',
-        'với',
-        'trong',
-        'này',
-        'đó',
-        'có',
-        'được',
-        'không',
-        'rằng',
         'the',
         'a',
         'an',
@@ -58,11 +157,42 @@ class LanguageUnderstanding {
         'to',
         'of',
         'and',
-        'in'
-      ]
-    );
+        'or',
+        'it',
+        'this',
+        'that'
+      ]);
 
-    this.intentRules = [
+    const counts =
+      new Map();
+
+    for (const token of tokens) {
+      if (
+        token.length < 2 ||
+        stopWords.has(token)
+      ) {
+        continue;
+      }
+
+      counts.set(
+        token,
+        (counts.get(token) || 0) + 1
+      );
+    }
+
+    return Array.from(
+      counts.entries()
+    )
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, this.maxKeywords)
+      .map(([word, count]) => ({
+        word,
+        count
+      }));
+  }
+
+  detectIntent(text) {
+    const rules = [
       {
         type: 'code',
         words: [
@@ -71,24 +201,29 @@ class LanguageUnderstanding {
           'javascript',
           'python',
           'lua',
-          'program',
-          'lập trình',
-          'viết code',
-          'sửa code'
+          'node',
+          'server.js',
+          'html',
+          'css',
+          'roblox'
         ]
       },
+
       {
         type: 'debug',
         words: [
+          'lỗi',
+          'error',
           'bug',
           'debug',
-          'error',
-          'lỗi',
-          'sửa lỗi',
           'fix',
-          'khắc phục'
+          'sửa lỗi',
+          'không chạy',
+          'crash',
+          'disconnect'
         ]
       },
+
       {
         type: 'research',
         words: [
@@ -96,10 +231,11 @@ class LanguageUnderstanding {
           'search',
           'research',
           'tra cứu',
-          'kiểm tra',
-          'look up'
+          'look up',
+          'kiểm tra'
         ]
       },
+
       {
         type: 'memory',
         words: [
@@ -108,9 +244,22 @@ class LanguageUnderstanding {
           'quên',
           'memory',
           'đã nói',
-          'ghi nhớ'
+          'lần trước'
         ]
       },
+
+      {
+        type: 'comparison',
+        words: [
+          'so sánh',
+          'khác nhau',
+          'vs',
+          'versus',
+          'hay hơn',
+          'giống nhau'
+        ]
+      },
+
       {
         type: 'analysis',
         words: [
@@ -122,6 +271,7 @@ class LanguageUnderstanding {
           'vì sao'
         ]
       },
+
       {
         type: 'creation',
         words: [
@@ -131,184 +281,219 @@ class LanguageUnderstanding {
           'xây',
           'làm',
           'viết',
-          'thiết kế'
+          'thiết kế',
+          'generate'
         ]
       },
+
       {
-        type: 'comparison',
+        type: 'conversation',
         words: [
-          'so sánh',
-          'compare',
-          'khác nhau',
-          'giống nhau',
-          'vs',
-          'versus'
-        ]
-      },
-      {
-        type: 'decision',
-        words: [
-          'nên',
-          'chọn',
-          'should',
-          'recommend',
-          'phù hợp'
+          'wow',
+          'haha',
+          'hay',
+          'tuyệt',
+          'ghê',
+          'bro',
+          'ê',
+          'này'
         ]
       }
     ];
-  }
 
-  analyze(input, context = {}) {
-    const raw =
-      String(input || '').trim();
-
-    const normalized =
-      this.normalize(raw);
-
-    const tokens =
-      this.tokenize(normalized);
-
-    const keywords =
-      this.extractKeywords(tokens);
-
-    const intent =
-      this.detectIntent(normalized);
-
-    const question =
-      this.detectQuestion(raw);
-
-    const negations =
-      this.detectNegations(normalized);
-
-    const entities =
-      this.extractEntities(raw);
-
-    const sentiment =
-      this.detectSentiment(normalized);
-
-    return {
-      raw,
-      normalized,
-      tokens,
-      keywords,
-      intent,
-      question,
-      negations,
-      entities,
-      sentiment,
-      language:
-        this.detectLanguage(normalized),
-      context
-    };
-  }
-
-  normalize(text) {
-    return String(text || '')
-      .normalize('NFC')
-      .toLowerCase()
-      .replace(/\s+/g, ' ')
-      .trim();
-  }
-
-  tokenize(text) {
-    return String(text || '')
-      .split(/[\s,.!?;:()[\]{}"'`]+/)
-      .map(x => x.trim())
-      .filter(Boolean);
-  }
-
-  extractKeywords(tokens) {
-    const result = [];
-
-    for (const token of tokens) {
+    for (const rule of rules) {
       if (
-        token.length <
-        this.minKeywordLength
+        rule.words.some(
+          word => text.includes(word)
+        )
       ) {
-        continue;
-      }
-
-      if (
-        this.stopWords.has(token)
-      ) {
-        continue;
-      }
-
-      if (!result.includes(token)) {
-        result.push(token);
+        return rule.type;
       }
     }
 
-    return result.slice(0, 32);
+    return 'chat';
   }
 
-  detectIntent(text) {
-    let best = {
-      type: 'chat',
-      score: 0,
-      matched: []
-    };
-
-    for (const rule of this.intentRules) {
-      const matched =
-        rule.words.filter(word =>
-          text.includes(word)
-        );
-
-      if (
-        matched.length >
-        best.matched.length
-      ) {
-        best = {
-          type: rule.type,
-          score:
-            Math.min(
-              1,
-              0.45 +
-              matched.length * 0.12
-            ),
-          matched
-        };
-      }
+  /**
+   * Speech Act quan trọng hơn intent
+   *
+   * CREATE + PRAISE không được xử lý
+   * giống CREATE + REQUEST.
+   */
+  detectSpeechAct(text, intent) {
+    if (!text) {
+      return 'EMPTY';
     }
 
-    return best;
+    if (
+      this.matches(text, [
+        'wow',
+        'tuyệt',
+        'hay quá',
+        'đỉnh',
+        'nice',
+        'great',
+        'awesome',
+        'thật tuyệt',
+        'giỏi',
+        'quá hay'
+      ])
+    ) {
+      return 'PRAISE';
+    }
+
+    if (
+      this.matches(text, [
+        'cảm ơn',
+        'thanks',
+        'thank you',
+        'thanks bro'
+      ])
+    ) {
+      return 'THANKS';
+    }
+
+    if (
+      this.matches(text, [
+        'xin chào',
+        'hello',
+        'hi',
+        'chào',
+        'hey'
+      ])
+    ) {
+      return 'GREETING';
+    }
+
+    if (
+      this.matches(text, [
+        'không phải',
+        'sai rồi',
+        'không đúng',
+        'sửa lại',
+        'ý tôi là',
+        'ý anh là'
+      ])
+    ) {
+      return 'CORRECTION';
+    }
+
+    if (
+      this.matches(text, [
+        'không',
+        'no',
+        'đừng',
+        'không cần'
+      ])
+    ) {
+      return 'DENIAL';
+    }
+
+    if (
+      this.matches(text, [
+        'đúng',
+        'chính xác',
+        'ok',
+        'okay',
+        'ừ',
+        'được'
+      ])
+    ) {
+      return 'CONFIRMATION';
+    }
+
+    if (
+      this.matches(text, [
+        'tại sao',
+        'vì sao',
+        'how',
+        'why',
+        'giải thích',
+        'explain'
+      ])
+    ) {
+      return 'EXPLANATION_REQUEST';
+    }
+
+    if (
+      this.matches(text, [
+        'có thể',
+        'liệu',
+        'phải không',
+        'đúng không',
+        'không?'
+      ]) ||
+      text.includes('?')
+    ) {
+      return 'QUESTION';
+    }
+
+    if (
+      this.matches(text, [
+        'tôi nghĩ',
+        'mình nghĩ',
+        'theo tôi',
+        'tôi thấy',
+        'mình thấy'
+      ])
+    ) {
+      return 'OPINION';
+    }
+
+    if (
+      this.matches(text, [
+        'hãy',
+        'làm',
+        'tạo',
+        'viết',
+        'build',
+        'create',
+        'implement',
+        'sửa'
+      ])
+    ) {
+      return 'REQUEST';
+    }
+
+    if (
+      this.matches(text, [
+        'haha',
+        'lol',
+        '😂',
+        '🤣',
+        'bro',
+        'ghê'
+      ])
+    ) {
+      return 'REACTION';
+    }
+
+    if (intent === 'memory') {
+      return 'MEMORY_REQUEST';
+    }
+
+    return 'OBSERVATION';
   }
 
   detectQuestion(text) {
-    const value =
-      String(text || '');
-
-    const questionWords = [
-      'ai',
-      'gì',
-      'sao',
-      'tại sao',
-      'vì sao',
-      'như nào',
-      'thế nào',
-      'bao nhiêu',
-      'khi nào',
-      'ở đâu',
-      'who',
-      'what',
-      'why',
-      'how',
-      'when',
-      'where'
-    ];
-
-    const matched =
-      questionWords.filter(word =>
-        value.toLowerCase().includes(word)
-      );
-
-    return {
-      isQuestion:
-        value.includes('?') ||
-        matched.length > 0,
-      matched
-    };
+    return (
+      text.includes('?') ||
+      this.matches(text, [
+        'tại sao',
+        'vì sao',
+        'làm sao',
+        'thế nào',
+        'bao nhiêu',
+        'ở đâu',
+        'khi nào',
+        'có phải',
+        'what',
+        'why',
+        'how',
+        'where',
+        'when'
+      ])
+    );
   }
 
   detectNegations(text) {
@@ -319,114 +504,245 @@ class LanguageUnderstanding {
       'không phải',
       'never',
       'not',
-      'no'
+      'no',
+      'without'
     ];
 
-    return words.filter(word =>
-      text.includes(word)
+    return words.filter(
+      word => text.includes(word)
     );
   }
 
-  extractEntities(text) {
-    const entities = [];
+  detectSentiment(text) {
+    const positive = [
+      'hay',
+      'tuyệt',
+      'đỉnh',
+      'thích',
+      'vui',
+      'awesome',
+      'great',
+      'nice',
+      'love',
+      'wow'
+    ];
 
-    const quoted =
-      String(text || '').match(
-        /["“](.+?)["”]/g
-      );
+    const negative = [
+      'ghét',
+      'tệ',
+      'dở',
+      'lỗi',
+      'bug',
+      'chán',
+      'khó chịu',
+      'sai',
+      'bad',
+      'terrible'
+    ];
 
-    if (quoted) {
-      for (const item of quoted) {
-        entities.push({
-          type: 'quoted',
-          value:
-            item.slice(1, -1)
-        });
-      }
+    const p =
+      positive.filter(
+        x => text.includes(x)
+      ).length;
+
+    const n =
+      negative.filter(
+        x => text.includes(x)
+      ).length;
+
+    if (p > n) {
+      return {
+        label: 'positive',
+        score: Math.min(1, p / 3)
+      };
     }
 
-    const urls =
-      String(text || '').match(
-        /https?:\/\/\S+/gi
-      );
+    if (n > p) {
+      return {
+        label: 'negative',
+        score: -Math.min(1, n / 3)
+      };
+    }
 
-    if (urls) {
-      for (const url of urls) {
-        entities.push({
-          type: 'url',
-          value: url
-        });
-      }
+    return {
+      label: 'neutral',
+      score: 0
+    };
+  }
+
+  detectLanguage(text) {
+    const vietnamese =
+      /[ăâđêôơưáàảãạấầẩẫậếềểễệốồổỗộớờởỡợứừửữự]/i
+        .test(text);
+
+    const english =
+      /\b(the|this|that|you|what|why|how|create|code|script)\b/i
+        .test(text);
+
+    if (vietnamese && english) {
+      return 'vi-en';
+    }
+
+    if (vietnamese) {
+      return 'vi';
+    }
+
+    if (english) {
+      return 'en';
+    }
+
+    return 'unknown';
+  }
+
+  extractEntities(original) {
+    const entities = [];
+
+    const urls =
+      original.match(
+        /https?:\/\/[^\s]+/gi
+      ) || [];
+
+    for (const url of urls) {
+      entities.push({
+        type: 'url',
+        value: url
+      });
+    }
+
+    const quoted =
+      original.match(
+        /["“](.+?)["”]/g
+      ) || [];
+
+    for (const item of quoted) {
+      entities.push({
+        type: 'quoted',
+        value: item.slice(1, -1)
+      });
     }
 
     return entities;
   }
 
-  detectSentiment(text) {
-    const positive = [
-      'tốt',
-      'hay',
-      'thích',
-      'tuyệt',
-      'vui',
-      'great',
-      'good',
-      'love'
+  detectTopic(text, keywords) {
+    const topicRules = [
+      ['roblox', 'Roblox'],
+      ['astra', 'Astra'],
+      ['ai', 'AI'],
+      ['javascript', 'JavaScript'],
+      ['node', 'Node.js'],
+      ['server', 'Backend'],
+      ['script', 'Programming'],
+      ['code', 'Programming'],
+      ['html', 'Web'],
+      ['physics', 'Physics'],
+      ['vũ trụ', 'Space'],
+      ['hành tinh', 'Space'],
+      ['game', 'Game']
     ];
 
-    const negative = [
-      'tệ',
-      'ghét',
-      'buồn',
-      'lỗi',
-      'xấu',
-      'bad',
-      'hate',
-      'broken'
-    ];
-
-    let score = 0;
-
-    for (const word of positive) {
-      if (text.includes(word)) {
-        score++;
+    for (const [key, value] of topicRules) {
+      if (text.includes(key)) {
+        return value;
       }
     }
 
-    for (const word of negative) {
-      if (text.includes(word)) {
-        score--;
-      }
-    }
-
-    return {
-      score,
-      label:
-        score > 0
-          ? 'positive'
-          : score < 0
-            ? 'negative'
-            : 'neutral'
-    };
+    return (
+      keywords[0]?.word ||
+      'general'
+    );
   }
 
-  detectLanguage(text) {
-    if (!text) {
-      return 'unknown';
+  detectFamiliarity(text, context) {
+    const level =
+      context.userModel?.familiarity ||
+      context.userModel?.technicalLevel;
+
+    if (level) {
+      return level;
     }
 
-    const vietnamese =
-      /[ăâđêôơưáàảãạấầẩẫậắằẳẵặ]/i;
+    const advancedTerms = [
+      'architecture',
+      'api',
+      'agentloop',
+      'planner',
+      'router',
+      'registry',
+      'runtime',
+      'backend',
+      'repository',
+      'database',
+      'capability',
+      'cognitive',
+      'sandbox'
+    ];
 
-    if (vietnamese.test(text)) {
-      return 'vi';
+    const score =
+      advancedTerms.filter(
+        term => text.includes(term)
+      ).length;
+
+    if (score >= 3) {
+      return 'advanced';
     }
 
-    if (/^[\x00-\x7F]+$/.test(text)) {
-      return 'en';
+    if (score >= 1) {
+      return 'intermediate';
     }
 
     return 'unknown';
+  }
+
+  detectUrgency(text) {
+    if (
+      this.matches(text, [
+        'khẩn cấp',
+        'urgent',
+        'gấp',
+        'ngay',
+        'asap'
+      ])
+    ) {
+      return 1;
+    }
+
+    return 0.3;
+  }
+
+  detectModality(text) {
+    if (
+      this.matches(text, [
+        'muốn',
+        'cần',
+        'hãy',
+        'please',
+        'can you',
+        'có thể'
+      ])
+    ) {
+      return 'request';
+    }
+
+    if (
+      this.matches(text, [
+        'có lẽ',
+        'chắc',
+        'có thể là',
+        'maybe',
+        'probably'
+      ])
+    ) {
+      return 'uncertain';
+    }
+
+    return 'assertive';
+  }
+
+  matches(text, words) {
+    return words.some(
+      word => text.includes(word)
+    );
   }
 }
 

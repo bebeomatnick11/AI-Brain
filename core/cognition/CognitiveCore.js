@@ -24,50 +24,44 @@ const GoalEngine =
 const LearningEngine =
   require('./LearningEngine');
 
+const UserModel =
+  require('./UserModel');
+
+const PersonalityEngine =
+  require('./PersonalityEngine');
+
+const DialogueEngine =
+  require('./DialogueEngine');
+
 const ResponseEngine =
   require('./ResponseEngine');
 
 /**
- * CognitiveCore
- *
- * Cognitive engine nội bộ của Astra.
- *
- * Không gọi:
- * - OpenAI
- * - Gemini
- * - DeepSeek
- * - Grok
- * - Ollama
- * - API model bên ngoài
+ * Astra Cognitive Core
  *
  * Cognitive cycle:
  *
- * INPUT
+ * PERCEIVE
  *   ↓
  * UNDERSTAND
  *   ↓
- * CONTEXT
+ * SPEECH ACT
  *   ↓
- * ASSOCIATE
+ * RECALL
+ *   ↓
+ * ADAPT
  *   ↓
  * REASON
  *   ↓
- * GOAL
+ * DECIDE
  *   ↓
- * RESPONSE
+ * RESPOND
  *   ↓
  * LEARN
  */
 
 class CognitiveCore {
   constructor(options = {}) {
-    this.name =
-      'Astra Cognitive Core';
-
-    this.version =
-      options.version ||
-      '0.1.0';
-
     this.language =
       options.languageUnderstanding ||
       new LanguageUnderstanding();
@@ -82,10 +76,9 @@ class CognitiveCore {
 
     this.associationEngine =
       options.associationEngine ||
-      new AssociationEngine({
-        conceptMemory:
-          this.conceptMemory
-      });
+      new AssociationEngine(
+        this.conceptMemory
+      );
 
     this.contextEngine =
       options.contextEngine ||
@@ -101,10 +94,21 @@ class CognitiveCore {
 
     this.learningEngine =
       options.learningEngine ||
-      new LearningEngine({
-        conceptMemory:
-          this.conceptMemory
-      });
+      new LearningEngine();
+
+    this.userModel =
+      options.userModel ||
+      new UserModel();
+
+    this.personalityEngine =
+      options.personalityEngine ||
+      new PersonalityEngine(
+        options.personality
+      );
+
+    this.dialogueEngine =
+      options.dialogueEngine ||
+      new DialogueEngine();
 
     this.responseEngine =
       options.responseEngine ||
@@ -114,218 +118,636 @@ class CognitiveCore {
       options.memoryProvider ||
       null;
 
-    this.knowledgeProvider =
-      options.knowledgeProvider ||
-      null;
-
     this.contextProvider =
       options.contextProvider ||
       null;
 
-    this.toolProvider =
-      options.toolProvider ||
-      null;
+    this.sessions =
+      new Map();
 
-    this.cycle = 0;
+    this.maxSessionHistory =
+      Number(
+        options.maxSessionHistory || 30
+      );
   }
 
   async process(
     message,
     options = {}
   ) {
-    const cycleId =
-      ++this.cycle;
-
     const startedAt =
       Date.now();
 
-    const input =
-      String(message || '').trim();
+    const userId =
+      String(
+        options.userId ||
+        options.brainId ||
+        'default-user'
+      );
 
-    if (!input) {
+    const sessionId =
+      String(
+        options.sessionId ||
+        userId
+      );
+
+    if (
+      !String(message || '').trim()
+    ) {
       return {
         success: false,
-        error: 'EMPTY_INPUT',
-        cycleId
+        error: 'EMPTY_MESSAGE'
       };
     }
 
     /*
-     * -------------------------------------------------------
-     * 1. UNDERSTAND
-     * -------------------------------------------------------
+     * ---------------------------------------------------------
+     * 1. LANGUAGE UNDERSTANDING
+     * ---------------------------------------------------------
      */
+
+    const previousModel =
+      this.userModel.get(
+        userId
+      );
 
     const understanding =
       this.language.analyze(
-        input,
-        options
+        message,
+        {
+          ...options,
+
+          userModel:
+            previousModel,
+
+          session:
+            this.getSession(
+              sessionId
+            )
+        }
       );
 
     /*
-     * -------------------------------------------------------
+     * ---------------------------------------------------------
      * 2. WORKING MEMORY
-     * -------------------------------------------------------
+     * ---------------------------------------------------------
      */
 
-    this.workingMemory.add(
-      {
-        type: 'user_input',
-        text: input
-      },
-      {
-        importance: 0.9
+    this.workingMemory.add({
+      type: 'user_message',
+
+      content:
+        String(message),
+
+      userId,
+
+      sessionId,
+
+      importance:
+        this.calculateImportance(
+          understanding
+        ),
+
+      timestamp:
+        Date.now()
+    });
+
+    /*
+     * ---------------------------------------------------------
+     * 3. USER MODEL
+     * ---------------------------------------------------------
+     */
+
+    const model =
+      this.userModel.observe(
+        userId,
+        {
+          text:
+            String(message),
+
+          language:
+            understanding.language,
+
+          intent:
+            understanding.intent,
+
+          speechAct:
+            understanding.speechAct,
+
+          topic:
+            understanding.topic,
+
+          explicitPreferences:
+            options.explicitPreferences
+        }
+      );
+
+    const adaptation =
+      this.userModel.getAdaptation(
+        userId
+      );
+
+    /*
+     * ---------------------------------------------------------
+     * 4. ASSOCIATION LEARNING
+     * ---------------------------------------------------------
+     */
+
+    try {
+      if (
+        typeof this.associationEngine
+          .learnFromTokens ===
+        'function'
+      ) {
+        this.associationEngine
+          .learnFromTokens(
+            understanding.tokens
+          );
       }
-    );
+    } catch {
+      // Association learning must never
+      // break the cognitive cycle.
+    }
 
     /*
-     * -------------------------------------------------------
-     * 3. ASSOCIATION LEARNING
-     * -------------------------------------------------------
-     */
-
-    const associations =
-      this.associationEngine
-        .learnFromTokens(
-          understanding.tokens
-        );
-
-    /*
-     * -------------------------------------------------------
-     * 4. EXTERNAL/PERSISTENT MEMORY
-     * -------------------------------------------------------
-     *
-     * Đây chỉ là bridge.
-     * Không bắt buộc phải tồn tại.
+     * ---------------------------------------------------------
+     * 5. MEMORY RETRIEVAL
+     * ---------------------------------------------------------
      */
 
     let memories = [];
 
     if (
-      this.memoryProvider &&
-      typeof this.memoryProvider.retrieve ===
-        'function'
+      this.memoryProvider
     ) {
       try {
-        memories =
-          await this.memoryProvider.retrieve(
-            input,
-            options
-          );
-      } catch {
+        if (
+          typeof this.memoryProvider
+            .retrieve ===
+          'function'
+        ) {
+          const result =
+            await this.memoryProvider
+              .retrieve(
+                message,
+                {
+                  userId,
+                  sessionId,
+                  limit:
+                    options.memoryLimit ||
+                    8
+                }
+              );
+
+          if (
+            Array.isArray(result)
+          ) {
+            memories = result;
+          } else if (
+            Array.isArray(
+              result?.memories
+            )
+          ) {
+            memories =
+              result.memories;
+          } else if (
+            result
+          ) {
+            memories = [result];
+          }
+        }
+      } catch (error) {
         memories = [];
       }
     }
 
     /*
-     * -------------------------------------------------------
-     * 5. CONTEXT
-     * -------------------------------------------------------
+     * ---------------------------------------------------------
+     * 6. CONTEXT PROVIDER
+     * ---------------------------------------------------------
      */
 
-    let context = {
-      message: input,
-      understanding,
-      memories
-    };
+    let externalContext = {};
 
     if (
-      this.contextProvider &&
-      typeof this.contextProvider.collect ===
-        'function'
+      this.contextProvider
     ) {
       try {
-        context =
-          await this.contextProvider.collect(
-            {
-              message: input,
-              understanding
-            },
-            context
-          );
+        if (
+          typeof this.contextProvider
+            .collect ===
+          'function'
+        ) {
+          externalContext =
+            await this.contextProvider
+              .collect({
+                message,
+                userId,
+                sessionId,
+                understanding
+              }) || {};
+        }
       } catch {
-        // Context provider failure
-        // must not destroy cognition.
+        externalContext = {};
       }
     }
 
-    context =
-      this.contextEngine.build({
-        message: input,
+    /*
+     * ---------------------------------------------------------
+     * 7. SESSION CONTEXT
+     * ---------------------------------------------------------
+     */
+
+    const session =
+      this.getSession(
+        sessionId
+      );
+
+    const conversationHistory =
+      session.history;
+
+    /*
+     * ---------------------------------------------------------
+     * 8. BUILD COGNITIVE CONTEXT
+     * ---------------------------------------------------------
+     */
+
+    let cognitiveContext = {};
+
+    try {
+      cognitiveContext =
+        this.contextEngine.build({
+          message,
+          understanding,
+          memories,
+          world:
+            options.world || {},
+          self:
+            options.self || {},
+          conversation:
+            conversationHistory,
+          external:
+            externalContext
+        }) || {};
+    } catch {
+      cognitiveContext = {
+        message,
         understanding,
         memories,
-        world:
-          options.world || null,
-        self:
-          options.self || null
-      });
+        conversation:
+          conversationHistory,
+        external:
+          externalContext
+      };
+    }
 
     /*
-     * -------------------------------------------------------
-     * 6. ASSOCIATIVE EXPANSION
-     * -------------------------------------------------------
+     * ---------------------------------------------------------
+     * 9. CONCEPT EXPANSION
+     * ---------------------------------------------------------
      */
 
-    const related =
-      this.associationEngine
-        .expandConcepts(
-          understanding.keywords
-        );
+    let concepts = [];
+
+    try {
+      if (
+        typeof this.associationEngine
+          .expandConcepts ===
+        'function'
+      ) {
+        concepts =
+          this.associationEngine
+            .expandConcepts(
+              understanding.keywords
+            ) || [];
+      }
+    } catch {
+      concepts = [];
+    }
 
     /*
-     * -------------------------------------------------------
-     * 7. REASONING
-     * -------------------------------------------------------
+     * ---------------------------------------------------------
+     * 10. REASONING
+     * ---------------------------------------------------------
      */
 
-    const reasoningState = {
-      ...context,
-      intent:
-        understanding.intent,
-      question:
-        understanding.question,
-      keywords:
-        understanding.keywords,
-      related
-    };
+    let reasoning = {};
 
-    const reasoning =
-      this.reasoningEngine.infer(
-        reasoningState
+    try {
+      reasoning =
+        this.reasoningEngine.infer({
+          message,
+          understanding,
+          concepts,
+          memories,
+          context:
+            cognitiveContext,
+          userModel:
+            model
+        }) || {};
+    } catch (error) {
+      reasoning = {
+        facts: [],
+        hypotheses: [],
+        conclusion:
+          'Không thể hoàn tất bước suy luận.',
+        error:
+          error.message
+      };
+    }
+
+    /*
+     * ---------------------------------------------------------
+     * 11. GOAL
+     * ---------------------------------------------------------
+     */
+
+    let goal = null;
+
+    try {
+      if (
+        typeof this.goalEngine
+          .inferFromContext ===
+        'function'
+      ) {
+        goal =
+          this.goalEngine
+            .inferFromContext({
+              message,
+              understanding,
+              reasoning,
+              userModel:
+                model
+            });
+      }
+    } catch {
+      goal = null;
+    }
+
+    /*
+     * ---------------------------------------------------------
+     * 12. PERSONALITY
+     * ---------------------------------------------------------
+     */
+
+    const personality =
+      this.personalityEngine.build(
+        model,
+        understanding,
+        cognitiveContext
       );
 
     /*
-     * -------------------------------------------------------
-     * 8. GOAL
-     * -------------------------------------------------------
+     * ---------------------------------------------------------
+     * 13. DIALOGUE DECISION
+     * ---------------------------------------------------------
      */
 
-    const goal =
-      this.goalEngine
-        .inferFromContext({
-          ...context,
-          intent:
-            understanding.intent
-        });
+    const dialogue =
+      this.dialogueEngine.decide({
+        understanding,
+
+        userModel:
+          model,
+
+        adaptation,
+
+        reasoning,
+
+        context:
+          cognitiveContext,
+
+        personality,
+
+        confidence:
+          understanding.confidence ||
+          0.5
+      });
 
     /*
-     * -------------------------------------------------------
-     * 9. INTERNAL COGNITIVE STATE
-     * -------------------------------------------------------
+     * ---------------------------------------------------------
+     * 14. COGNITIVE STATE
+     * ---------------------------------------------------------
      */
 
     const cognitiveState = {
-      cycleId,
+      userId,
 
-      input,
+      sessionId,
 
       understanding,
 
-      context,
+      userModel:
+        adaptation,
 
-      associations,
+      personality,
 
-      related,
+      dialogue,
+
+      reasoning,
+
+      goal,
+
+      concepts,
+
+      memories,
+
+      context:
+        cognitiveContext,
+
+      timestamp:
+        Date.now()
+    };
+
+    /*
+     * ---------------------------------------------------------
+     * 15. RESPONSE
+     * ---------------------------------------------------------
+     */
+
+    let response =
+      this.responseEngine.generate({
+        message,
+
+        understanding,
+
+        userModel:
+          model,
+
+        adaptation,
+
+        personality,
+
+        dialogue,
+
+        reasoning,
+
+        goal,
+
+        concepts,
+
+        memories,
+
+        context:
+          cognitiveContext,
+
+        results:
+          options.results || []
+      });
+
+    /*
+     * ---------------------------------------------------------
+     * 16. SESSION UPDATE
+     * ---------------------------------------------------------
+     */
+
+    this.addSessionMessage(
+      sessionId,
+      {
+        role: 'user',
+
+        content:
+          String(message),
+
+        understanding: {
+          intent:
+            understanding.intent,
+
+          speechAct:
+            understanding.speechAct,
+
+          topic:
+            understanding.topic
+        },
+
+        timestamp:
+          Date.now()
+      }
+    );
+
+    this.addSessionMessage(
+      sessionId,
+      {
+        role: 'assistant',
+
+        content:
+          response,
+
+        mode:
+          dialogue.mode,
+
+        timestamp:
+          Date.now()
+      }
+    );
+
+    /*
+     * ---------------------------------------------------------
+     * 17. LEARNING
+     * ---------------------------------------------------------
+     */
+
+    try {
+      if (
+        typeof this.learningEngine
+          .record ===
+        'function'
+      ) {
+        this.learningEngine.record({
+          input:
+            String(message),
+
+          understanding,
+
+          reasoning,
+
+          action:
+            options.results || [],
+
+          result: {
+            response
+          },
+
+          success: true,
+
+          userId,
+
+          sessionId,
+
+          timestamp:
+            Date.now()
+        });
+      }
+    } catch {
+      // Learning failure must not
+      // destroy the response.
+    }
+
+    /*
+     * ---------------------------------------------------------
+     * 18. PERSIST MEMORY
+     * ---------------------------------------------------------
+     */
+
+    if (
+      this.memoryProvider &&
+      typeof this.memoryProvider
+        .remember ===
+      'function'
+    ) {
+      try {
+        await this.memoryProvider
+          .remember({
+            type:
+              'conversation',
+
+            userId,
+
+            sessionId,
+
+            message:
+              String(message),
+
+            response,
+
+            intent:
+              understanding.intent,
+
+            speechAct:
+              understanding.speechAct,
+
+            topic:
+              understanding.topic,
+
+            timestamp:
+              Date.now()
+          });
+      } catch {
+        // Persistent memory is optional.
+      }
+    }
+
+    /*
+     * ---------------------------------------------------------
+     * 19. RETURN
+     * ---------------------------------------------------------
+     */
+
+    return {
+      success: true,
+
+      response,
+
+      cognitiveState,
+
+      understanding,
+
+      dialogue,
+
+      userModel:
+        adaptation,
+
+      personality,
 
       reasoning,
 
@@ -333,143 +755,199 @@ class CognitiveCore {
 
       memories,
 
-      workingMemory:
-        this.workingMemory.recent(8)
-    };
-
-    /*
-     * -------------------------------------------------------
-     * 10. RESPONSE
-     * -------------------------------------------------------
-     */
-
-    const response =
-      this.responseEngine.generate(
-        cognitiveState
-      );
-
-    /*
-     * -------------------------------------------------------
-     * 11. LEARNING
-     * -------------------------------------------------------
-     */
-
-    const learning =
-      this.learningEngine.record({
-        input,
-
-        understanding,
-
-        reasoning,
-
-        action: goal,
-
-        result: response,
-
-        success: true
-      });
-
-    /*
-     * -------------------------------------------------------
-     * 12. PERSIST MEMORY
-     * -------------------------------------------------------
-     */
-
-    if (
-      this.memoryProvider &&
-      typeof this.memoryProvider.remember ===
-        'function'
-    ) {
-      try {
-        await this.memoryProvider.remember(
-          {
-            type: 'cognitive_experience',
-
-            input,
-
-            intent:
-              understanding.intent,
-
-            reasoning:
-              reasoning.conclusion,
-
-            response:
-              response.text
-          },
-          {
-            cycleId
-          }
-        );
-      } catch {
-        // Persistent memory failure
-        // must not break the cognitive cycle.
-      }
-    }
-
-    /*
-     * -------------------------------------------------------
-     * 13. FINAL RESULT
-     * -------------------------------------------------------
-     */
-
-    return {
-      success: true,
-
-      cycleId,
-
-      core: {
-        name: this.name,
-        version: this.version
-      },
-
-      input,
-
-      understanding,
-
-      context,
-
-      reasoning,
-
-      goal,
-
-      response,
-
-      learning: {
-        recorded: !!learning
-      },
+      sessionId,
 
       duration:
-        Date.now() - startedAt
+        Date.now() -
+        startedAt
     };
   }
 
-  getState() {
+  getSession(sessionId) {
+    const id =
+      String(sessionId);
+
+    if (
+      !this.sessions.has(id)
+    ) {
+      this.sessions.set(
+        id,
+        {
+          id,
+
+          history: [],
+
+          createdAt:
+            Date.now(),
+
+          lastActivity:
+            Date.now()
+        }
+      );
+    }
+
+    const session =
+      this.sessions.get(id);
+
+    session.lastActivity =
+      Date.now();
+
+    return session;
+  }
+
+  addSessionMessage(
+    sessionId,
+    message
+  ) {
+    const session =
+      this.getSession(
+        sessionId
+      );
+
+    session.history.push(
+      message
+    );
+
+    while (
+      session.history.length >
+      this.maxSessionHistory
+    ) {
+      session.history.shift();
+    }
+  }
+
+  calculateImportance(
+    understanding
+  ) {
+    let score = 0.4;
+
+    if (
+      understanding.speechAct ===
+      'CORRECTION'
+    ) {
+      score += 0.3;
+    }
+
+    if (
+      understanding.speechAct ===
+      'MEMORY_REQUEST'
+    ) {
+      score += 0.3;
+    }
+
+    if (
+      understanding.intent ===
+      'code'
+    ) {
+      score += 0.15;
+    }
+
+    if (
+      understanding.intent ===
+      'debug'
+    ) {
+      score += 0.2;
+    }
+
+    return Math.min(
+      1,
+      score
+    );
+  }
+
+  getState(userId = 'default-user') {
     return {
-      name: this.name,
-      version: this.version,
-      cycle: this.cycle,
+      userModel:
+        this.userModel.snapshot(
+          userId
+        ),
+
+      sessions:
+        Array.from(
+          this.sessions.values()
+        ).map(
+          session => ({
+            id:
+              session.id,
+
+            history:
+              session.history,
+
+            createdAt:
+              session.createdAt,
+
+            lastActivity:
+              session.lastActivity
+          })
+        ),
 
       workingMemory:
-        this.workingMemory.snapshot(),
+        typeof this.workingMemory
+          .snapshot ===
+        'function'
+          ? this.workingMemory
+              .snapshot()
+          : null,
 
-      concepts:
-        this.conceptMemory.snapshot(),
-
-      learning:
-        this.learningEngine.statistics(),
-
-      activeGoals:
-        this.goalEngine.active()
+      conceptMemory:
+        typeof this.conceptMemory
+          .snapshot ===
+        'function'
+          ? this.conceptMemory
+              .snapshot()
+          : null
     };
   }
 
-  reset() {
-    this.workingMemory.clear();
-    this.contextEngine.clear();
+  reset(userId = null) {
+    if (
+      userId === null
+    ) {
+      this.sessions.clear();
+      this.userModel.clear();
 
-    this.goalEngine.goals = [];
+      if (
+        typeof this.workingMemory
+          .clear ===
+        'function'
+      ) {
+        this.workingMemory.clear();
+      }
 
-    return true;
+      if (
+        typeof this.conceptMemory
+          .clear ===
+        'function'
+      ) {
+        this.conceptMemory.clear();
+      }
+
+      return;
+    }
+
+    this.userModel.clear(
+      userId
+    );
+
+    const prefix =
+      String(userId);
+
+    for (
+      const [
+        id
+      ] of this.sessions
+    ) {
+      if (
+        id === prefix ||
+        id.startsWith(
+          `${prefix}:`
+        )
+      ) {
+        this.sessions.delete(
+          id
+        );
+      }
+    }
   }
 }
 

@@ -5280,276 +5280,728 @@ function markOffline() {
     // SKILL REGISTRY
     // ========================================================
 
-    if (
-      pathname ===
-        '/api/skills' &&
-      method ===
-        'GET'
-    ) {
-      if (!isAuth(req)) {
-        return json(
-          res,
-          401,
-          {
-            error:
-              'Unauthorized'
-          },
-          corsHeaders
+async function handleSkillRegistry(
+    req,
+    res,
+    context = {}
+) {
+
+    const pathname =
+        String(
+            context.pathname ||
+            ''
         );
-      }
 
-      const query =
-        url.searchParams.get(
-          'q'
-        ) || '';
+    const method =
+        String(
+            context.method ||
+            req.method ||
+            ''
+        ).toUpperCase();
 
-      const type =
-        url.searchParams.get(
-          'type'
-        ) || '';
+    const url =
+        context.url ||
+        null;
 
-      const ownerId =
-        url.searchParams.get(
-          'ownerId'
-        ) || '';
+    const skillRegistry =
+        context.skillRegistry;
 
-      const skills =
-        skillRegistry.list({
-          query,
-          type,
-          ownerId
-        });
+    const BRAIN_API_SECRET =
+        String(
+            context.BRAIN_API_SECRET ||
+            ''
+        ).trim();
 
-      return json(
-        res,
-        200,
-        {
-          success: true,
-          total:
-            skills.length,
-          skills
-        },
-        corsHeaders
-      );
-    }
+
+    // --------------------------------------------------------
+    // Dependency check
+    // --------------------------------------------------------
 
     if (
-      pathname.startsWith(
-        '/api/skills/'
-      ) &&
-      method ===
-        'GET'
+        !skillRegistry ||
+        typeof skillRegistry.list !== 'function' ||
+        typeof skillRegistry.get !== 'function'
     ) {
-      if (!isAuth(req)) {
-        return json(
-          res,
-          401,
-          {
-            error:
-              'Unauthorized'
-          },
-          corsHeaders
-        );
-      }
 
-      const id =
-        decodeURIComponent(
-          pathname.slice(
-            '/api/skills/'.length
-          )
-        );
-
-      const skill =
-        skillRegistry.get(
-          id
-        );
-
-      if (!skill) {
-        return json(
-          res,
-          404,
-          {
-            error:
-              'Skill not found'
-          },
-          corsHeaders
-        );
-      }
-
-      return json(
-        res,
-        200,
-        {
-          success: true,
-          skill
-        },
-        corsHeaders
-      );
+        return false;
     }
+
+
+    // ========================================================
+    // GET /api/skills
+    // ========================================================
 
     if (
-      pathname ===
-        '/api/skills' &&
-      method ===
-        'POST'
+        pathname === '/api/skills' &&
+        method === 'GET'
     ) {
-      if (!verifyBrain(req)) {
-        return json(
-          res,
-          401,
-          {
-            error:
-              'Invalid or missing Brain API secret'
-          },
-          corsHeaders
-        );
-      }
 
-      const body =
-        await readBody(req);
+        let query = '';
+        let type = '';
+        let ownerId = '';
 
-      try {
-        const skill =
-          skillRegistry.create(
-            body
-          );
+        if (url && url.searchParams) {
 
-        return json(
-          res,
-          201,
-          {
-            success: true,
-            skill
-          },
-          corsHeaders
-        );
+            query =
+                String(
+                    url.searchParams.get('q') ||
+                    url.searchParams.get('query') ||
+                    ''
+                ).trim();
 
-      } catch (error) {
-        return json(
-          res,
-          400,
-          {
-            error:
-              error.message
-          },
-          corsHeaders
-        );
-      }
+            type =
+                String(
+                    url.searchParams.get('type') ||
+                    ''
+                ).trim();
+
+            ownerId =
+                String(
+                    url.searchParams.get('ownerId') ||
+                    ''
+                ).trim();
+        }
+
+        try {
+
+            const skills =
+                skillRegistry.list({
+                    query,
+                    type,
+                    ownerId
+                });
+
+            return sendJSON(
+                res,
+                200,
+                {
+                    success: true,
+
+                    skills:
+                        Array.isArray(skills)
+                            ? skills
+                            : [],
+
+                    count:
+                        Array.isArray(skills)
+                            ? skills.length
+                            : 0
+                }
+            );
+
+        } catch (error) {
+
+            console.error(
+                '[SkillRegistry] LIST failed:',
+                error
+            );
+
+            return sendJSON(
+                res,
+                500,
+                {
+                    success: false,
+
+                    error:
+                        error.message ||
+                        'Failed to list skills.'
+                }
+            );
+        }
     }
+
+
+    // ========================================================
+    // GET /api/skills/:id
+    // ========================================================
 
     if (
-      pathname.startsWith(
-        '/api/skills/'
-      ) &&
-      method ===
-        'PATCH'
+        pathname.startsWith('/api/skills/') &&
+        method === 'GET'
     ) {
-      if (!verifyBrain(req)) {
-        return json(
-          res,
-          401,
-          {
-            error:
-              'Invalid or missing Brain API secret'
-          },
-          corsHeaders
-        );
-      }
 
-      const id =
-        decodeURIComponent(
-          pathname.slice(
-            '/api/skills/'.length
-          )
-        );
+        const skillId =
+            pathname
+                .slice('/api/skills/'.length)
+                .split('/')[0];
 
-      const body =
-        await readBody(req);
+        if (!skillId) {
 
-      try {
-        const skill =
-          skillRegistry.update(
-            id,
-            body
-          );
+            return sendJSON(
+                res,
+                400,
+                {
+                    success: false,
 
-        return json(
-          res,
-          200,
-          {
-            success: true,
-            skill
-          },
-          corsHeaders
-        );
+                    error:
+                        'Skill ID is required.'
+                }
+            );
+        }
 
-      } catch (error) {
-        return json(
-          res,
-          400,
-          {
-            error:
-              error.message
-          },
-          corsHeaders
-        );
-      }
+        try {
+
+            const skill =
+                skillRegistry.get(
+                    decodeURIComponent(skillId)
+                );
+
+            if (!skill) {
+
+                return sendJSON(
+                    res,
+                    404,
+                    {
+                        success: false,
+
+                        error:
+                            'Skill not found.'
+                    }
+                );
+            }
+
+            return sendJSON(
+                res,
+                200,
+                {
+                    success: true,
+
+                    skill
+                }
+            );
+
+        } catch (error) {
+
+            console.error(
+                '[SkillRegistry] GET failed:',
+                error
+            );
+
+            return sendJSON(
+                res,
+                500,
+                {
+                    success: false,
+
+                    error:
+                        error.message ||
+                        'Failed to get skill.'
+                }
+            );
+        }
     }
+
+
+    // ========================================================
+    // POST /api/skills
+    // ========================================================
 
     if (
-      pathname.startsWith(
-        '/api/skills/'
-      ) &&
-      method ===
-        'DELETE'
+        pathname === '/api/skills' &&
+        method === 'POST'
     ) {
-      if (!verifyBrain(req)) {
-        return json(
-          res,
-          401,
-          {
-            error:
-              'Invalid or missing Brain API secret'
-          },
-          corsHeaders
-        );
-      }
 
-      const id =
-        decodeURIComponent(
-          pathname.slice(
-            '/api/skills/'.length
-          )
-        );
+        // ----------------------------------------------------
+        // Authentication
+        // ----------------------------------------------------
 
-      try {
-        const skill =
-          skillRegistry.remove(
-            id
-          );
+        const providedSecret =
+            String(
+                req.headers['x-brain-secret'] ||
+                ''
+            ).trim();
 
-        return json(
-          res,
-          200,
-          {
-            success: true,
-            skill
-          },
-          corsHeaders
-        );
+        if (
+            !BRAIN_API_SECRET ||
+            !providedSecret ||
+            providedSecret !== BRAIN_API_SECRET
+        ) {
 
-      } catch (error) {
-        return json(
-          res,
-          400,
-          {
-            error:
-              error.message
-          },
-          corsHeaders
-        );
-      }
+            return sendJSON(
+                res,
+                401,
+                {
+                    success: false,
+
+                    error:
+                        'Unauthorized.'
+                }
+            );
+        }
+
+
+        // ----------------------------------------------------
+        // Read body
+        // ----------------------------------------------------
+
+        let body;
+
+        try {
+
+            body =
+                await readBody(req);
+
+        } catch (error) {
+
+            return sendJSON(
+                res,
+                400,
+                {
+                    success: false,
+
+                    error:
+                        error.message ||
+                        'Invalid request body.'
+                }
+            );
+        }
+
+
+        // ----------------------------------------------------
+        // Validate body
+        // ----------------------------------------------------
+
+        if (
+            !body ||
+            typeof body !== 'object' ||
+            Array.isArray(body)
+        ) {
+
+            return sendJSON(
+                res,
+                400,
+                {
+                    success: false,
+
+                    error:
+                        'Invalid skill payload.'
+                }
+            );
+        }
+
+
+        // ----------------------------------------------------
+        // Owner
+        // ----------------------------------------------------
+
+        const ownerId =
+            String(
+                body.ownerId ||
+                body.userId ||
+                ''
+            ).trim();
+
+        if (
+            !ownerId ||
+            !/^\d+$/.test(ownerId)
+        ) {
+
+            return sendJSON(
+                res,
+                400,
+                {
+                    success: false,
+
+                    error:
+                        'Valid ownerId is required.'
+                }
+            );
+        }
+
+
+        // ----------------------------------------------------
+        // Create
+        // ----------------------------------------------------
+
+        if (
+            typeof skillRegistry.create !==
+            'function'
+        ) {
+
+            return sendJSON(
+                res,
+                501,
+                {
+                    success: false,
+
+                    error:
+                        'Skill creation is not available.'
+                }
+            );
+        }
+
+        try {
+
+            const skill =
+                skillRegistry.create({
+
+                    ...body,
+
+                    ownerId
+                });
+
+            return sendJSON(
+                res,
+                201,
+                {
+                    success: true,
+
+                    skill
+                }
+            );
+
+        } catch (error) {
+
+            console.error(
+                '[SkillRegistry] CREATE failed:',
+                error
+            );
+
+            return sendJSON(
+                res,
+                400,
+                {
+                    success: false,
+
+                    error:
+                        error.message ||
+                        'Failed to create skill.'
+                }
+            );
+        }
     }
+
+
+    // ========================================================
+    // PATCH /api/skills/:id
+    // ========================================================
+
+    if (
+        pathname.startsWith('/api/skills/') &&
+        method === 'PATCH'
+    ) {
+
+        // ----------------------------------------------------
+        // Authentication
+        // ----------------------------------------------------
+
+        const providedSecret =
+            String(
+                req.headers['x-brain-secret'] ||
+                ''
+            ).trim();
+
+        if (
+            !BRAIN_API_SECRET ||
+            !providedSecret ||
+            providedSecret !== BRAIN_API_SECRET
+        ) {
+
+            return sendJSON(
+                res,
+                401,
+                {
+                    success: false,
+
+                    error:
+                        'Unauthorized.'
+                }
+            );
+        }
+
+
+        // ----------------------------------------------------
+        // Skill ID
+        // ----------------------------------------------------
+
+        const skillId =
+            pathname
+                .slice('/api/skills/'.length)
+                .split('/')[0];
+
+        if (!skillId) {
+
+            return sendJSON(
+                res,
+                400,
+                {
+                    success: false,
+
+                    error:
+                        'Skill ID is required.'
+                }
+            );
+        }
+
+
+        // ----------------------------------------------------
+        // Read body
+        // ----------------------------------------------------
+
+        let body;
+
+        try {
+
+            body =
+                await readBody(req);
+
+        } catch (error) {
+
+            return sendJSON(
+                res,
+                400,
+                {
+                    success: false,
+
+                    error:
+                        error.message ||
+                        'Invalid request body.'
+                }
+            );
+        }
+
+
+        // ----------------------------------------------------
+        // Validate body
+        // ----------------------------------------------------
+
+        if (
+            !body ||
+            typeof body !== 'object' ||
+            Array.isArray(body)
+        ) {
+
+            return sendJSON(
+                res,
+                400,
+                {
+                    success: false,
+
+                    error:
+                        'Invalid skill payload.'
+                }
+            );
+        }
+
+
+        // ----------------------------------------------------
+        // Update
+        // ----------------------------------------------------
+
+        if (
+            typeof skillRegistry.update !==
+            'function'
+        ) {
+
+            return sendJSON(
+                res,
+                501,
+                {
+                    success: false,
+
+                    error:
+                        'Skill update is not available.'
+                }
+            );
+        }
+
+        try {
+
+            const skill =
+                skillRegistry.update(
+                    decodeURIComponent(skillId),
+                    body
+                );
+
+            return sendJSON(
+                res,
+                200,
+                {
+                    success: true,
+
+                    skill
+                }
+            );
+
+        } catch (error) {
+
+            const message =
+                error.message ||
+                'Failed to update skill.';
+
+            let status = 400;
+
+            if (
+                message === 'Skill not found'
+            ) {
+
+                status = 404;
+
+            } else if (
+                message ===
+                'Built-in skills cannot be modified'
+            ) {
+
+                status = 403;
+            }
+
+            return sendJSON(
+                res,
+                status,
+                {
+                    success: false,
+
+                    error:
+                        message
+                }
+            );
+        }
+    }
+
+
+    // ========================================================
+    // DELETE /api/skills/:id
+    // ========================================================
+
+    if (
+        pathname.startsWith('/api/skills/') &&
+        method === 'DELETE'
+    ) {
+
+        // ----------------------------------------------------
+        // Authentication
+        // ----------------------------------------------------
+
+        const providedSecret =
+            String(
+                req.headers['x-brain-secret'] ||
+                ''
+            ).trim();
+
+        if (
+            !BRAIN_API_SECRET ||
+            !providedSecret ||
+            providedSecret !== BRAIN_API_SECRET
+        ) {
+
+            return sendJSON(
+                res,
+                401,
+                {
+                    success: false,
+
+                    error:
+                        'Unauthorized.'
+                }
+            );
+        }
+
+
+        // ----------------------------------------------------
+        // Skill ID
+        // ----------------------------------------------------
+
+        const skillId =
+            pathname
+                .slice('/api/skills/'.length)
+                .split('/')[0];
+
+        if (!skillId) {
+
+            return sendJSON(
+                res,
+                400,
+                {
+                    success: false,
+
+                    error:
+                        'Skill ID is required.'
+                }
+            );
+        }
+
+
+        // ----------------------------------------------------
+        // Delete
+        // ----------------------------------------------------
+
+        if (
+            typeof skillRegistry.remove !==
+            'function'
+        ) {
+
+            return sendJSON(
+                res,
+                501,
+                {
+                    success: false,
+
+                    error:
+                        'Skill deletion is not available.'
+                }
+            );
+        }
+
+        try {
+
+            const removed =
+                skillRegistry.remove(
+                    decodeURIComponent(skillId)
+                );
+
+            return sendJSON(
+                res,
+                200,
+                {
+                    success: true,
+
+                    skill:
+                        removed
+                }
+            );
+
+        } catch (error) {
+
+            const message =
+                error.message ||
+                'Failed to delete skill.';
+
+            let status = 400;
+
+            if (
+                message === 'Skill not found'
+            ) {
+
+                status = 404;
+
+            } else if (
+                message ===
+                'Built-in skills cannot be deleted'
+            ) {
+
+                status = 403;
+            }
+
+            return sendJSON(
+                res,
+                status,
+                {
+                    success: false,
+
+                    error:
+                        message
+                }
+            );
+        }
+    }
+
+
+    // ========================================================
+    // Not a Skill Registry route
+    // ========================================================
+
+    return false;
+}
 
 // ============================================================
 // BRAIN REGISTER

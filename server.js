@@ -650,12 +650,6 @@ async function initPostgres() {
   }
 }
 
-      console.log(
-        '[Astra DB] Initial state migrated to PostgreSQL.'
-      );
-    }
-
-
     return true;
 
   } catch (error) {

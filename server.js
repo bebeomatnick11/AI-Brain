@@ -1,18 +1,15 @@
 /**
  * ============================================================
- * ASTRA BRAIN REGISTRY V6
- * Backward-compatible Player Intelligence Registry
+ * ASTRA BRAIN V6
  * ============================================================
  *
- * Giữ:
+ * Currently available:
  * - Brain registration
  * - Brain heartbeat
  * - Dashboard auth
  * - Skills
  * - Online/offline tracking
  * - Existing brains.json
- *
- * Thêm:
  * - Player profiles
  * - Player description
  * - Username history
@@ -24,7 +21,7 @@
  * - First/last seen
  * - Player telemetry
  * - Player profile API
- *
+ * - ...
  * ASTRA BRAIN V6:
  * - Collective Intelligence
  * - Game discovery
@@ -34,169 +31,308 @@
  * - Learning events
  * - Verified knowledge
  * - Game learning score
- *
+ * - ...
  * ROBLOX GAME METADATA:
  * - Game description
  * - Game icon
  * - Game thumbnail
  * - Universe ID resolution
  * - Metadata caching
- *
- * Node 18+
- * Zero external runtime dependencies
+ * - ...
+ * vulgar language on this arduous journey, ahhh
  * ============================================================
  */
 
-const http = require('http');
-const fs = require('fs');
-const path = require('path');
-const crypto = require('crypto');
-const { URL } = require('url');
+"use strict";
+
+const http = require("http");
+const express = require("express");
+const fs = require("fs");
+const path = require("path");
+const crypto = require("crypto");
+const { URL } = require("url");
+const EventEmitter = require("events");
+
+const app = express();
+
+app.use(
+    express.json({
+        limit: "10mb"
+    })
+);
+
+app.use(
+    express.urlencoded({
+        extended: true,
+        limit: "10mb"
+    })
+);
+
+// ============================================================
+// SKILL / BRAIN
+// ============================================================
 
 const skillRegistry =
-  require('./skills/skill-registry');
+    require("./skills/skill-registry");
 
 const {
-  BrainRuntime
-} = require('./core/brain-runtime');
+    BrainRuntime
+} =
+    require("./core/brain-runtime");
 
 // ============================================================
-// ASTRA BRAIN — OPTIONAL PERSISTENT DATABASE
-// ============================================================
-//
-// DATABASE_URL:
-// - Có  -> dùng PostgreSQL khi adapter được bật
-// - Không -> giữ nguyên brains.json hiện tại
-//
-// Không yêu cầu AI API key.
-// Đây chỉ là storage backend.
+// DATABASE
 // ============================================================
 
 const DATABASE_URL =
-  process.env.DATABASE_URL || '';
+    process.env.DATABASE_URL || "";
 
 const USE_POSTGRES =
-  DATABASE_URL.trim().length > 0;
+    DATABASE_URL.trim().length > 0;
 
 let postgresPool = null;
 
 if (USE_POSTGRES) {
-  try {
-    const { Pool } = require('pg');
 
-    postgresPool = new Pool({
-      connectionString: DATABASE_URL,
+    try {
 
-      ssl:
-        process.env.NODE_ENV === 'production'
-          ? { rejectUnauthorized: false }
-          : false,
+        const {
+            Pool
+        } =
+            require("pg");
 
-      max: Number(
-        process.env.PG_POOL_MAX || 5
-      ),
+        postgresPool =
+            new Pool({
 
-      idleTimeoutMillis: 30000,
+                connectionString:
+                    DATABASE_URL,
 
-      connectionTimeoutMillis: 10000
-    });
+                ssl:
+                    process.env.NODE_ENV === "production"
+                        ? {
+                            rejectUnauthorized:
+                                false
+                        }
+                        : false,
 
-    postgresPool.on(
-      'error',
-      error => {
-        console.error(
-          '[Astra DB] PostgreSQL pool error:',
-          error.message
+                max:
+                    Number(
+                        process.env.PG_POOL_MAX || 5
+                    ),
+
+                idleTimeoutMillis:
+                    30000,
+
+                connectionTimeoutMillis:
+                    10000
+            });
+
+        postgresPool.on(
+            "error",
+            error => {
+
+                console.error(
+                    "[Astra DB] PostgreSQL pool error:",
+                    error.message
+                );
+
+            }
         );
-      }
+
+        console.log(
+            "[Astra DB] PostgreSQL adapter enabled."
+        );
+
+    } catch (error) {
+
+        console.error(
+            "[Astra DB] PostgreSQL adapter could not start:",
+            error.message
+        );
+
+        console.error(
+            "[Astra DB] Falling back to brains.json."
+        );
+
+        postgresPool = null;
+    }
+
+} else {
+
+    console.log(
+        "[Astra DB] DATABASE_URL not configured."
     );
 
     console.log(
-      '[Astra DB] PostgreSQL adapter enabled.'
+        "[Astra DB] Using existing brains.json storage."
     );
-
-  } catch (error) {
-
-    console.error(
-      '[Astra DB] PostgreSQL adapter could not start:',
-      error.message
-    );
-
-    console.error(
-      '[Astra DB] Falling back to brains.json.'
-    );
-
-    postgresPool = null;
-  }
-} else {
-
-  console.log(
-    '[Astra DB] DATABASE_URL not configured.'
-  );
-
-  console.log(
-    '[Astra DB] Using existing brains.json storage.'
-  );
 }
 
+// ============================================================
+// TOOLS
+// ============================================================
+
 const {
-  ToolRegistry
-} = require('./core/tool-registry');
+    ToolRegistry
+} =
+    require("./core/tool-registry");
 
 const memoryTool =
-  require('./tools/memory-tool');
+    require("./tools/memory-tool");
 
 const knowledgeTool =
-  require('./tools/knowledge-tool');
+    require("./tools/knowledge-tool");
 
 const playerTool =
-  require('./tools/player-tool');
+    require("./tools/player-tool");
 
 const gameTool =
-  require('./tools/game-tool');
+    require("./tools/game-tool");
+
+// ============================================================
+// AGENT
+// ============================================================
 
 const AgentLoop =
-  require('./agent/AgentLoop');
+    require("./agent/AgentLoop");
 
 const IntentEngine =
-  require('./agent/IntentEngine');
+    require("./agent/IntentEngine");
 
 const Planner =
-  require('./agent/Planner');
+    require("./agent/Planner");
 
 const WorldModel =
-  require('./agent/WorldModel');
+    require("./agent/WorldModel");
 
 const SelfState =
-  require('./agent/SelfState');
+    require("./agent/SelfState");
 
 const VerificationTool =
-  require('./tools/verification-tool');
+    require("./tools/verification-tool");
+
+// ============================================================
+// CAPABILITIES
+// ============================================================
 
 const CapabilityRegistry =
-  require('./core/capabilityRegistry');
+    require("./core/capabilityRegistry");
 
 const CapabilityRouter =
-  require('./capabilities/capabilityRouter');
+    require("./capabilities/capabilityRouter");
 
 const {
-  registerCapabilities
+    registerCapabilities
 } =
-  require('./capabilities');
+    require("./capabilities");
+
+// ============================================================
+// PROVIDERS
+// ============================================================
 
 const {
-  createProviderRouter
+    createProviderRouter
 } =
-  require('./providers');
+    require("./providers");
+
+// ============================================================
+// API
+// ============================================================
 
 const registerAgentAPI =
-  require('./server/agent-api');
+    require("./server/agent-api");
 
 const registerCapabilityAPI =
-  require('./server/capability-api');
+    require("./server/capability-api");
 
 const registerHealthAPI =
-  require('./server/health-api');
+    require("./server/health-api");
+
+// ============================================================
+// EVOLUTION
+// ============================================================
+
+const {
+    EvolutionRuntime
+} =
+    require("./core/evolution/EvolutionRuntime");
+
+const ExperimentLab =
+    require("./core/experiments/ExperimentLab");
+
+const ExperimentWorkspace =
+    require("./core/experiments/ExperimentWorkspace");
+
+const ExperimentHistory =
+    require("./core/experiments/ExperimentHistory");
+
+const ExperimentPolicy =
+    require("./core/experiments/ExperimentPolicy");
+
+const ExperimentRunner =
+    require("./core/experiments/ExperimentRunner");
+
+const ChangeArchive =
+    require("./core/modification/ChangeArchive");
+
+const PermissionEngine =
+    require("./core/security/PermissionEngine");
+
+const ApprovalPolicy =
+    require("./core/security/ApprovalPolicy");
+
+const ChangeRiskAnalyzer =
+    require("./core/security/ChangeRiskAnalyzer");
+
+const SecretRedactor =
+    require("./core/security/SecretRedactor");
+
+const SecurityAudit =
+    require("./core/security/SecurityAudit");
+
+const SecurityGate =
+    require("./core/security/SecurityGate");
+
+const {
+    ModificationEngine
+} =
+    require("./core/evolution/ModificationEngine");
+
+const {
+    VerificationController
+} =
+    require("./core/evolution/VerificationController");
+
+const {
+    RollbackManager
+} =
+    require("./core/evolution/RollbackManager");
+
+// ============================================================
+// EVOLUTION API
+// ============================================================
+
+const {
+    registerEvolutionRoutes
+} =
+    require("./server/api/evolution-routes");
+
+// ============================================================
+// EVOLUTION RUNTIME
+// ============================================================
+
+const evolutionRuntime =
+    new EvolutionRuntime({
+
+        db,
+
+        eventBus,
+
+        logger: console
+    });
+
+app.locals.evolution =
+    evolutionRuntime;
 // ============================================================
 // CONFIG
 // ============================================================
@@ -5836,6 +5972,116 @@ async function handler(
 
   const method =
     req.method;
+
+// ============================================================
+// HEALTH / READINESS
+// ============================================================
+
+if (req.method === "GET" && req.url === "/health") {
+const health = {
+ok: true,
+service: "astra-brain",
+status: "alive",
+timestamp: new Date().toISOString(),
+uptime: Math.floor(process.uptime()),
+memory: {
+rss: Math.round(process.memoryUsage().rss / 1024 / 1024),
+heapUsed: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
+heapTotal: Math.round(process.memoryUsage().heapTotal / 1024 / 1024)
+}
+};
+
+res.writeHead(200, {  
+    "Content-Type": "application/json; charset=utf-8",  
+    "Cache-Control": "no-store, no-cache, must-revalidate",  
+    "Access-Control-Allow-Origin": "*"  
+});  
+
+res.end(JSON.stringify(health));  
+return;
+
+}
+
+// ============================================================
+// READINESS
+// ============================================================
+
+if (req.method === "GET" && req.url === "/ready") {
+let databaseReady = true;
+let registryReady = true;
+let capabilitiesReady = true;
+
+// --------------------------------------------------------  
+// DATABASE  
+// --------------------------------------------------------  
+try {  
+    if (typeof pool !== "undefined" && pool) {  
+        await pool.query("SELECT 1");  
+    }  
+} catch (error) {  
+    databaseReady = false;  
+}  
+
+// --------------------------------------------------------  
+// CAPABILITY REGISTRY  
+// --------------------------------------------------------  
+try {  
+    if (  
+        typeof capabilityRegistry === "undefined" ||  
+        !capabilityRegistry  
+    ) {  
+        capabilitiesReady = false;  
+    }  
+} catch (error) {  
+    capabilitiesReady = false;  
+}  
+
+// --------------------------------------------------------  
+// REGISTRY  
+// --------------------------------------------------------  
+try {  
+    if (  
+        typeof capabilityRouter === "undefined" ||  
+        !capabilityRouter  
+    ) {  
+        registryReady = false;  
+    }  
+} catch (error) {  
+    registryReady = false;  
+}  
+
+const ready =  
+    databaseReady &&  
+    registryReady &&  
+    capabilitiesReady;  
+
+const result = {  
+    ok: ready,  
+    ready,  
+    service: "astra-brain",  
+    status: ready ? "ready" : "degraded",  
+    timestamp: new Date().toISOString(),  
+
+    checks: {  
+        server: true,  
+        database: databaseReady,  
+        capabilityRegistry: capabilitiesReady,  
+        capabilityRouter: registryReady  
+    },  
+
+    uptime: Math.floor(process.uptime())  
+};  
+
+res.writeHead(ready ? 200 : 503, {  
+    "Content-Type": "application/json; charset=utf-8",  
+    "Cache-Control": "no-store, no-cache, must-revalidate",  
+    "Access-Control-Allow-Origin": "*"  
+});  
+
+res.end(JSON.stringify(result));  
+return;
+
+}
 
   // ==========================================================
   // CORS

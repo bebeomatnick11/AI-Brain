@@ -8245,8 +8245,7 @@ const planner =
 const verifier =
   new VerificationTool();
 
-const providerRouter =
-  createProviderRouter();
+const providerRouter = null;
 
 const agentLoop =
   new AgentLoop({

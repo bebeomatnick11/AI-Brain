@@ -321,16 +321,6 @@ const {
 // EVOLUTION RUNTIME
 // ============================================================
 
-const evolutionRuntime =
-    new EvolutionRuntime({
-
-        db,
-
-        eventBus,
-
-        logger: console
-    });
-
 app.locals.evolution =
     evolutionRuntime;
 // ============================================================
@@ -507,6 +497,15 @@ function loadDB() {
 let db =
   loadDB();
 
+const evolutionRuntime =
+    new EvolutionRuntime({
+
+        db,
+
+        eventBus,
+
+        logger: console
+    });
 
 // ============================================================
 // ASTRA BRAIN — POSTGRESQL SCHEMA + STORAGE HELPERS

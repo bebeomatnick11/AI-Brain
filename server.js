@@ -318,12 +318,6 @@ const {
     require("./server/api/evolution-routes");
 
 // ============================================================
-// EVOLUTION RUNTIME
-// ============================================================
-
-app.locals.evolution =
-    evolutionRuntime;
-// ============================================================
 // CONFIG
 // ============================================================
 
@@ -506,6 +500,9 @@ const evolutionRuntime =
 
         logger: console
     });
+
+app.locals.evolution =
+    evolutionRuntime;
 
 // ============================================================
 // ASTRA BRAIN — POSTGRESQL SCHEMA + STORAGE HELPERS

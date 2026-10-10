@@ -579,23 +579,26 @@ function update(
   }
 
   if (
-    input.name !==
-    undefined
-  ) {
-    const name =
-      cleanText(
-        input.name,
-        MAX_NAME
-      );
+  input.name !==
+  undefined
+) {
 
-    if (!name) {
-      throw new Error(
-        'Skill name is required'
-      );
+  const name =
+    cleanText(
+      input.name,
+      MAX_NAME
+    );
 
-    skill.name =
-      name;
+  if (!name) {
+
+    throw new Error(
+      'Skill name is required'
+    );
   }
+
+  skill.name =
+    name;
+}
 
   if (
     input.description !==

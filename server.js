@@ -491,6 +491,8 @@ function loadDB() {
 let db =
   loadDB();
 
+const eventBus = new EventEmitter();
+
 const evolutionRuntime =
     new EvolutionRuntime({
 

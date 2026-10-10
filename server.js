@@ -1220,6 +1220,16 @@ function verifyBrain(
   );
 }
 
+function requireBrainSecret(req, res, next) {
+  if (!verifyBrain(req)) {
+    return res.status(401).json({
+      error: 'Invalid or missing Brain API secret'
+    });
+  }
+
+  next();
+}
+
 // ============================================================
 // RATE LIMIT
 // ============================================================

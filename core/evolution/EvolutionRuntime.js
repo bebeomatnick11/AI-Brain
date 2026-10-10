@@ -181,7 +181,7 @@ const {
 const {
     ModificationEngine
 } = require(
-    "../modification/ModificationEngine"
+    "./ModificationEngine"
 );
 
 const ChangeSet =

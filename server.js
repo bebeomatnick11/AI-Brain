@@ -90,9 +90,15 @@ const DATABASE_URL =
 const USE_POSTGRES =
     DATABASE_URL.trim().length > 0;
 
+const MONGODB_URI =
+  process.env.MONGODB_URI || "";
+
+const USE_MONGODB =
+  MONGODB_URI.trim().length > 0;
+
 let postgresPool = null;
 
-if (USE_POSTGRES) {
+if (USE_POSTGRES && !USE_MONGODB) {
 
     try {
 
@@ -157,15 +163,25 @@ if (USE_POSTGRES) {
         postgresPool = null;
     }
 
+} else if (USE_MONGODB) {
+
+  console.log(
+    "[Astra DB] MongoDB Atlas configured."
+  );
+
+  console.log(
+    "[Astra DB] MongoDB is the primary database."
+  );
+
 } else {
 
-    console.log(
-        "[Astra DB] DATABASE_URL not configured."
-    );
+  console.log(
+    "[Astra DB] DATABASE_URL not configured."
+  );
 
-    console.log(
-        "[Astra DB] Using existing brains.json storage."
-    );
+  console.log(
+    "[Astra DB] Using existing brains.json storage."
+  );
 }
 
 // ============================================================
@@ -492,7 +508,53 @@ let db =
   loadDB();
 
 const eventBus = new EventEmitter();
+function restoreDBState(state) {
+  const normalized = {
+    ...createEmptyDB(),
+    ...(state && typeof state === "object"
+      ? state
+      : {})
+  };
 
+  for (const [key, incoming] of Object.entries(normalized)) {
+    if (Array.isArray(incoming)) {
+      if (Array.isArray(db[key])) {
+        db[key].length = 0;
+
+        for (const item of incoming) {
+          db[key].push(item);
+        }
+      } else {
+        db[key] = incoming;
+      }
+
+      continue;
+    }
+
+    if (
+      incoming &&
+      typeof incoming === "object"
+    ) {
+      if (
+        db[key] &&
+        typeof db[key] === "object" &&
+        !Array.isArray(db[key])
+      ) {
+        for (const existingKey of Object.keys(db[key])) {
+          delete db[key][existingKey];
+        }
+
+        Object.assign(db[key], incoming);
+      } else {
+        db[key] = incoming;
+      }
+
+      continue;
+    }
+
+    db[key] = incoming;
+  }
+}
 const evolutionRuntime =
     new EvolutionRuntime({
 
@@ -556,10 +618,7 @@ async function initPostgres() {
       );
 
       // PostgreSQL becomes the source of truth.
-      db = {
-        ...createEmptyDB(),
-        ...postgresDB
-      };
+      restoreDBState(postgresDB);
 
       console.log(
         '[Astra DB] Database restored from PostgreSQL.'
@@ -735,38 +794,169 @@ async function savePostgresDB(state) {
   }
 }
 
-// ============================================================
-// ASTRA BRAIN — DATABASE STARTUP SYNCHRONIZATION
-// ============================================================
+let mongoClient = null;
+let mongoCollection = null;
+let mongoReady = false;
 
-let postgresInitPromise = null;
-
-postgresInitPromise =
-  initPostgres().catch(error => {
-
-    postgresReady = false;
-
-    console.error(
-      '[Astra DB] Startup database initialization error:',
-      error.message
-    );
-
-    console.error(
-      '[Astra DB] Continuing with JSON storage.'
-    );
-
-    return false;
-  });
-
-
-async function waitForPostgres() {
-
-  if (!postgresInitPromise) {
+async function saveMongoDB(state) {
+  if (!mongoReady || !mongoCollection) {
     return false;
   }
 
   try {
-    return await postgresInitPromise;
+    await mongoCollection.replaceOne(
+      { _id: "main" },
+      {
+        _id: "main",
+        data: state,
+        updatedAt: new Date()
+      },
+      { upsert: true }
+    );
+
+    return true;
+  } catch (error) {
+    console.error(
+      "[Astra DB] MongoDB write failed:",
+      error.message
+    );
+
+    return false;
+  }
+}
+
+async function initMongo() {
+  if (!USE_MONGODB) {
+    return false;
+  }
+
+  try {
+    const { MongoClient } = require("mongodb");
+
+    mongoClient = new MongoClient(MONGODB_URI, {
+      serverSelectionTimeoutMS: 10000
+    });
+
+    await mongoClient.connect();
+
+    const database = process.env.MONGODB_DATABASE
+      ? mongoClient.db(process.env.MONGODB_DATABASE)
+      : mongoClient.db();
+
+    mongoCollection = database.collection(
+      "astra_brain_state"
+    );
+
+    mongoReady = true;
+
+    console.log(
+      "[Astra DB] MongoDB Atlas connection established."
+    );
+
+    const stored = await mongoCollection.findOne({
+      _id: "main"
+    });
+
+    if (stored) {
+      if (
+        !stored.data ||
+        typeof stored.data !== "object" ||
+        Array.isArray(stored.data)
+      ) {
+        throw new Error(
+          "Existing MongoDB state is invalid; refusing to overwrite it."
+        );
+      }
+
+      restoreDBState(stored.data);
+
+      console.log(
+        "[Astra DB] State restored from MongoDB."
+      );
+    } else {
+      const hasExistingData = Object.values(db).some(
+        value =>
+          Array.isArray(value)
+            ? value.length > 0
+            : value &&
+              typeof value === "object" &&
+              Object.keys(value).length > 0
+      );
+
+      const saved = await saveMongoDB(db);
+
+      if (!saved) {
+        throw new Error(
+          "Could not initialize MongoDB state."
+        );
+      }
+
+      console.log(
+        hasExistingData
+          ? "[Astra DB] Existing JSON state migrated to MongoDB."
+          : "[Astra DB] Empty MongoDB state initialized."
+      );
+    }
+
+    return true;
+  } catch (error) {
+    mongoReady = false;
+
+    console.error(
+      "[Astra DB] MongoDB initialization failed:",
+      error.message
+    );
+
+    console.error(
+      "[Astra DB] Continuing with JSON fallback."
+    );
+
+    if (mongoClient) {
+      try {
+        await mongoClient.close();
+      } catch {}
+    }
+
+    mongoClient = null;
+    mongoCollection = null;
+
+    return false;
+  }
+}
+
+// ============================================================
+// ASTRA BRAIN — DATABASE STARTUP SYNCHRONIZATION
+// ============================================================
+
+let databaseInitPromise = null;
+
+databaseInitPromise = (
+  USE_MONGODB
+    ? initMongo()
+    : initPostgres()
+).catch(error => {
+  mongoReady = false;
+  postgresReady = false;
+
+  console.error(
+    "[Astra DB] Database initialization error:",
+    error.message
+  );
+
+  console.error(
+    "[Astra DB] Continuing with JSON fallback."
+  );
+
+  return false;
+});
+
+async function waitForDatabase() {
+  if (!databaseInitPromise) {
+    return false;
+  }
+
+  try {
+    return await databaseInitPromise;
   } catch {
     return false;
   }
@@ -831,40 +1021,45 @@ async function performSaveDB(
   // 2. WAIT FOR DATABASE INITIALIZATION
   // ==========================================================
 
-  await waitForPostgres();
+  await waitForDatabase();
 
-
-  // ==========================================================
-  // 3. SAVE TO POSTGRESQL
-  // ==========================================================
-
-  if (
-    postgresReady &&
-    postgresPool
-  ) {
-
-    const saved =
-      await savePostgresDB(
-        db
-      );
-
-    if (!saved) {
-
-      console.error(
-        '[Astra DB] PostgreSQL save failed.'
-      );
-
-      console.error(
-        '[Astra DB] JSON backup remains available.'
-      );
-
-      return;
-    }
+if (USE_MONGODB) {
+  if (!mongoReady || !mongoCollection) {
+    // JSON backup vẫn được giữ.
+    // Không đánh dấu dữ liệu là đã lưu vào MongoDB.
+    return;
   }
 
+  const saved = await saveMongoDB(db);
 
-  dirty =
-    false;
+  if (!saved) {
+    console.error(
+      "[Astra DB] MongoDB save failed."
+    );
+
+    console.error(
+      "[Astra DB] JSON backup remains available."
+    );
+
+    return;
+  }
+} else if (postgresReady && postgresPool) {
+  const saved = await savePostgresDB(db);
+
+  if (!saved) {
+    console.error(
+      "[Astra DB] PostgreSQL save failed."
+    );
+
+    console.error(
+      "[Astra DB] JSON backup remains available."
+    );
+
+    return;
+  }
+}
+
+dirty = false;
 }
 
 // ============================================================
@@ -898,23 +1093,8 @@ function saveDB(
 
 let saveQueue = Promise.resolve();
 
-function queueDBSave(
-  force = false
-) {
-
-  saveQueue =
-    saveQueue
-      .then(() => saveDB(force))
-      .catch(error => {
-
-        console.error(
-          '[Astra DB] Queued save failed:',
-          error.message
-        );
-
-      });
-
-  return saveQueue;
+function queueDBSave(force = false) {
+  return saveDB(force);
 }
 
 setInterval(
@@ -8317,36 +8497,38 @@ registerHealthAPI(
 // START SERVER
 // ============================================================
 
-server.listen(
-  PORT,
-  '0.0.0.0',
-  () => {
+async function startServer() {
+  await databaseInitPromise;
 
-    console.log(
-      `Astra Brain Registry V2 running on port ${PORT}`
-    );
+  server.listen(
+    PORT,
+    "0.0.0.0",
+    () => {
+      console.log(
+        `Astra Brain Registry V2 running on port ${PORT}`
+      );
 
-    console.log(
-      `Data: ${dbPath}`
-    );
+      console.log(`Data: ${dbPath}`);
 
-    console.log(
-      `Players: ${
-        Object.keys(
-          db.players
-        ).length
-      }`
-    );
+      console.log(
+        `Players: ${Object.keys(db.players).length}`
+      );
 
-    console.log(
-      `Brains: ${
-        Object.keys(
-          db.brains
-        ).length
-      }`
-    );
-  }
-);
+      console.log(
+        `Brains: ${Object.keys(db.brains).length}`
+      );
+    }
+  );
+}
+
+startServer().catch(error => {
+  console.error(
+    "[Astra DB] Server startup failed:",
+    error.message
+  );
+
+  process.exitCode = 1;
+});
 
 // ============================================================
 // ASTRA BRAIN — GRACEFUL DATABASE SHUTDOWN
@@ -8386,6 +8568,20 @@ async function gracefulShutdown(
 
   }
 
+if (mongoClient) {
+  try {
+    await mongoClient.close();
+
+    console.log(
+      "[Astra DB] MongoDB connection closed."
+    );
+  } catch (error) {
+    console.error(
+      "[Astra DB] MongoDB shutdown error:",
+      error.message
+    );
+  }
+}
 
   // Đóng PostgreSQL pool
   if (postgresPool) {

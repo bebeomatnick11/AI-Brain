@@ -1,903 +1,162 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-  <meta charset="UTF-8" />
-
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
-  />
-
-  <meta
-    name="theme-color"
-    content="#070910"
-  />
-
-  <meta
-    name="color-scheme"
-    content="dark"
-  />
-
-  <title>AI Brain Registry</title>
-
-  <link
-    rel="stylesheet"
-    href="/styles.css"
-  />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#090d18">
+<title>Astra Brain Registry</title>
+<style>
+:root{color-scheme:dark;--bg:#090d18;--panel:#111a2c;--panel2:#172239;--line:#293651;--text:#eef3ff;--muted:#96a5c3;--purple:#8b7cff;--cyan:#49dfcc;--green:#43d6a0;--red:#ff7188}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(900px 500px at 90% -10%,#8b7cff24,transparent 65%),var(--bg);color:var(--text);font:14px/1.55 system-ui,-apple-system,sans-serif}button,input,textarea,select{font:inherit}button{cursor:pointer}button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}.hidden{display:none!important}
+.top{height:68px;position:sticky;top:0;z-index:10;display:flex;align-items:center;justify-content:space-between;padding:0 22px;background:#090d18eF;backdrop-filter:blur(16px);border-bottom:1px solid var(--line)}.brand{display:flex;align-items:center;gap:11px;font-weight:800;font-size:16px}.logo{display:grid;place-items:center;width:40px;height:40px;border-radius:14px;background:linear-gradient(135deg,var(--purple),var(--cyan));color:white;font-weight:900;font-size:21px}.muted{color:var(--muted)}.small{font-size:12px}.status{font-size:12px;color:var(--muted)}
+.layout{display:grid;grid-template-columns:220px 1fr;min-height:calc(100vh - 68px);max-width:1600px;margin:auto}.sidebar{padding:20px 12px;border-right:1px solid var(--line)}.label{padding:8px 11px;color:#71809e;font-size:10px;letter-spacing:1.5px;font-weight:800}.nav{display:grid;gap:5px}.nav button{display:flex;gap:11px;align-items:center;padding:11px 13px;border:1px solid transparent;border-radius:12px;background:none;color:var(--muted);text-align:left}.nav button:hover,.nav button.active{background:#8b7cff18;border-color:#8b7cff40;color:white}.nav i{width:22px;text-align:center;font-style:normal;font-size:17px}
+main{min-width:0;padding:26px clamp(14px,3vw,32px)}.heading{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;margin-bottom:22px}.eyebrow{color:var(--cyan);font-size:10px;letter-spacing:1.7px;font-weight:800}h1,h2,h3,p{margin-top:0}h1{font-size:29px;letter-spacing:-.7px;margin:5px 0}h2{font-size:24px;margin:4px 0}h3{font-size:15px;margin:0}.btn{border:1px solid var(--line);border-radius:11px;padding:9px 13px;background:#ffffff07;color:var(--text)}.btn:hover{background:#ffffff12}.primary{background:linear-gradient(135deg,#8b7cff,#6a62e8);border-color:transparent;font-weight:700}.danger{color:#ff9bad}.actions{display:flex;gap:8px;flex-wrap:wrap}
+.grid{display:grid;gap:13px}.stats{grid-template-columns:repeat(4,minmax(0,1fr));margin-bottom:17px}.stat,.card{min-width:0;border:1px solid var(--line);border-radius:17px;background:linear-gradient(145deg,#151e32,#101727);padding:17px;box-shadow:0 12px 40px #0002}.stat-title{font-size:12px;color:var(--muted);display:flex;justify-content:space-between}.stat-num{font-size:29px;font-weight:850;margin-top:10px;letter-spacing:-1px}.card-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:15px}.two{grid-template-columns:minmax(0,1.3fr) minmax(250px,.7fr)}.quick{display:grid;gap:9px}.quick button{text-align:left;min-height:85px}.quick strong{display:block;margin-bottom:3px}.quick span{font-size:12px;color:var(--muted)}
+.field{width:100%;min-width:0;padding:11px 12px;border:1px solid var(--line);border-radius:11px;background:#090f1d;color:var(--text)}.field::placeholder{color:#71809e}.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:13px}.search{flex:1;min-width:145px}.chips,.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:13px}.chip,.tab{padding:7px 11px;border:1px solid var(--line);border-radius:999px;background:none;color:var(--muted)}.chip.active,.tab.active{color:white;background:#8b7cff20;border-color:#8b7cff66}
+.list{display:grid;gap:9px}.row{display:flex;align-items:center;gap:11px;padding:12px;border:1px solid var(--line);border-radius:13px;background:#ffffff03;min-width:0}.row.click{cursor:pointer}.row.click:hover{border-color:#8b7cff77;background:#8b7cff09}.avatar{flex:0 0 40px;height:40px;display:grid;place-items:center;border:1px solid #8b7cff44;border-radius:12px;background:#8b7cff19;font-size:18px}.row-main{flex:1;min-width:0}.row-title{font-weight:750;overflow-wrap:anywhere}.row-meta{color:var(--muted);font-size:12px;overflow-wrap:anywhere}.pill{display:inline-flex;padding:3px 8px;border:1px solid var(--line);border-radius:999px;color:var(--muted);font-size:10px}.online{color:var(--green);border-color:#43d6a044}.empty{padding:28px 12px;text-align:center;border:1px dashed #34415d;border-radius:13px;color:var(--muted)}.empty strong{display:block;color:var(--text);margin-bottom:4px}.error{padding:11px;border:1px solid #ff718844;border-radius:11px;color:#ff9bad;background:#ff71880c;white-space:pre-wrap;overflow-wrap:anywhere}
+.detail{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.cell{border:1px solid var(--line);border-radius:11px;padding:11px;overflow-wrap:anywhere}.cell small{display:block;color:var(--muted);margin-bottom:5px}
+.chat-layout{display:grid;grid-template-columns:minmax(0,1fr) 240px;gap:13px}.chat-card{display:flex;flex-direction:column;min-height:55vh}.messages{display:flex;flex-direction:column;gap:11px;flex:1;min-height:300px;max-height:55vh;overflow:auto;padding:3px 1px 15px}.message{max-width:88%;padding:11px 13px;border:1px solid var(--line);border-radius:14px;background:#ffffff06;white-space:pre-wrap;overflow-wrap:anywhere}.message.user{align-self:flex-end;background:#8b7cff20;border-color:#8b7cff55}.who{display:block;color:var(--cyan);font-size:10px;font-weight:800;letter-spacing:1px;margin-bottom:4px}.chat-form{display:flex;align-items:flex-end;gap:8px;padding-top:12px;border-top:1px solid var(--line)}.chat-form textarea{resize:vertical;min-height:45px;max-height:140px}.chat-form button{min-height:45px}.labform{display:grid;gap:12px}.labform label{display:grid;gap:6px;color:var(--muted);font-size:12px}.output{min-height:150px;max-height:380px;overflow:auto;padding:13px;background:#080d17;border:1px solid var(--line);border-radius:11px;white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.6 ui-monospace,monospace}
+.modal{position:fixed;inset:0;z-index:30;display:grid;place-items:center;padding:15px}.backdrop{position:absolute;inset:0;background:#02040bdb;backdrop-filter:blur(5px)}.modalbox{position:relative;width:min(700px,100%);max-height:85vh;overflow:auto;padding:20px;border:1px solid #394562;border-radius:18px;background:#111a2c}.toast{position:fixed;z-index:60;bottom:18px;right:18px;max-width:calc(100vw - 36px);padding:12px 15px;border:1px solid var(--line);border-radius:12px;background:#172239;box-shadow:0 10px 35px #0008}.notice{padding:11px 13px;margin-bottom:13px;border:1px solid #ffca7244;border-radius:11px;background:#ffca720a;color:#eed6a7;font-size:12px}.footer{text-align:center;padding:22px;color:#71809e;font-size:11px}
+@media(max-width:900px){.layout{grid-template-columns:1fr}.sidebar{position:sticky;top:68px;z-index:9;padding:7px 10px;background:#090d18f5;border-right:0;border-bottom:1px solid var(--line);overflow:auto}.label{display:none}.nav{display:flex;width:max-content;min-width:100%}.nav button{white-space:nowrap;padding:8px 11px}main{padding:19px 13px}}
+@media(max-width:620px){.top{padding:0 12px}.top .status{display:none}.brand{font-size:14px}.logo{width:36px;height:36px}.stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.stat{padding:12px}.stat-num{font-size:25px}.two,.chat-layout{grid-template-columns:1fr}.heading{flex-direction:column}.heading .actions{width:100%}.heading .actions .btn{flex:1}.card{padding:13px}.messages{min-height:280px;max-height:48vh}.detail{grid-template-columns:1fr 1fr}}
+</style>
 </head>
-
 <body>
-
-  <div id="app">
-
-    <!-- =====================================================
-         LOGIN
-         ===================================================== -->
-
-    <div
-      id="login-screen"
-      class="screen"
-    >
-
-      <div class="login-card">
-
-        <div class="brand-mark">
-          🧠
-        </div>
-
-        <h1>AI Brain Registry</h1>
-
-        <p>
-          Roblox Adaptive Agents
-        </p>
-
-        <form id="login-form">
-
-          <div class="input-group">
-
-            <label for="password">
-              Mật khẩu truy cập
-            </label>
-
-            <input
-              type="password"
-              id="password"
-              placeholder="Nhập mật khẩu..."
-              autocomplete="current-password"
-              required
-            />
-
-          </div>
-
-          <button
-            type="submit"
-            id="login-btn"
-            class="btn btn-primary"
-          >
-
-            <span class="btn-text">
-              Đăng nhập
-            </span>
-
-            <span class="btn-loading hidden">
-              Đang xác thực...
-            </span>
-
-          </button>
-
-          <p
-            id="login-error"
-            class="error hidden"
-          ></p>
-
-        </form>
-
-        <p class="small muted">
-          🔒 Chỉ người có mật khẩu mới được truy cập hệ thống.
-        </p>
-
-      </div>
-
-    </div>
-
-
-    <!-- =====================================================
-         DASHBOARD
-         ===================================================== -->
-
-    <div
-      id="dashboard"
-      class="hidden"
-    >
-
-      <!-- HEADER -->
-
-      <header class="topbar">
-
-        <div class="header-left">
-
-          <div class="brand">
-
-            🧠 AI Brain Registry
-
-            <span class="sub">
-              Roblox Adaptive Agents
-            </span>
-
-          </div>
-
-        </div>
-
-
-        <div class="top-actions">
-
-          <button
-            id="learning-btn"
-            class="btn"
-            type="button"
-          >
-            🧠 <span>Learning</span>
-          </button>
-
-          <button
-            id="skills-btn"
-            class="btn"
-            type="button"
-          >
-            🛠️ <span>Skills</span>
-          </button>
-
-          <button
-            id="back-dashboard-btn"
-            class="btn hidden"
-            type="button"
-          >
-            ← <span>Dashboard</span>
-          </button>
-
-          <button
-            id="refresh-btn"
-            class="btn"
-            type="button"
-            title="Làm mới"
-          >
-            ↻
-          </button>
-
-          <button
-            id="logout-btn"
-            class="btn"
-            type="button"
-          >
-            🚪 <span>Đăng xuất</span>
-          </button>
-
-        </div>
-
-      </header>
-
-
-      <!-- ===================================================
-           MAIN
-           =================================================== -->
-
-      <main>
-
-
-        <!-- =================================================
-             NORMAL DASHBOARD
-             ================================================= -->
-
-        <section
-          id="dashboard-view"
-          class="tab-page"
-        >
-
-          <!-- STATS -->
-
-          <section class="stats">
-
-            <div class="stat">
-
-              <div
-                class="stat-value n"
-                id="stat-total"
-              >
-                0
-              </div>
-
-              <div class="stat-label l">
-                Tổng Brain
-              </div>
-
-            </div>
-
-
-            <div class="stat">
-
-              <div
-                class="stat-value n online"
-                id="stat-online"
-              >
-                0
-              </div>
-
-              <div class="stat-label l">
-                Online
-              </div>
-
-            </div>
-
-
-            <div class="stat">
-
-              <div
-                class="stat-value n offline"
-                id="stat-offline"
-              >
-                0
-              </div>
-
-              <div class="stat-label l">
-                Offline
-              </div>
-
-            </div>
-
-
-            <div class="stat">
-
-              <div
-                class="stat-value n"
-                id="stat-active"
-              >
-                —
-              </div>
-
-              <div class="stat-label l">
-                Active Agents
-              </div>
-
-            </div>
-
-
-            <div class="stat">
-
-              <div
-                class="stat-value n"
-                id="stat-games"
-              >
-                —
-              </div>
-
-              <div class="stat-label l">
-                Games
-              </div>
-
-            </div>
-
-
-            <div class="stat">
-
-              <div
-                class="stat-value n"
-                id="stat-events"
-              >
-                —
-              </div>
-
-              <div class="stat-label l">
-                Events
-              </div>
-
-            </div>
-
-          </section>
-
-
-          <!-- SEARCH -->
-
-          <section class="panel">
-
-            <div class="toolbar">
-
-              <input
-                type="search"
-                id="search-input"
-                class="search"
-                placeholder="🔎  Tìm UserId, DisplayName, Brain ID..."
-                autocomplete="off"
-              />
-
-              <button
-                class="btn filter-btn active"
-                data-status=""
-                type="button"
-              >
-                Tất cả
-              </button>
-
-              <button
-                class="btn filter-btn"
-                data-status="online"
-                type="button"
-              >
-                🟢 Online
-              </button>
-
-              <button
-                class="btn filter-btn"
-                data-status="offline"
-                type="button"
-              >
-                🔴 Offline
-              </button>
-
-            </div>
-
-          </section>
-
-
-          <!-- BRAIN LIST -->
-
-          <section class="panel">
-
-            <h2>
-              🤖 Registered Brains
-            </h2>
-
-
-            <div
-              id="loading-state"
-              class="empty hidden"
-            >
-
-              <div class="spinner"></div>
-
-              <p>
-                Đang tải dữ liệu...
-              </p>
-
-            </div>
-
-
-            <div
-              id="empty-state"
-              class="empty hidden"
-            >
-
-              <div class="brand-mark">
-                🤖
-              </div>
-
-              <strong>
-                Chưa có AI Brain nào.
-              </strong>
-
-              <p>
-                Khi Agent đăng ký thành công,
-                Brain sẽ xuất hiện tại đây.
-              </p>
-
-            </div>
-
-
-            <div
-              id="error-state"
-              class="empty hidden"
-            >
-
-              <div class="brand-mark">
-                ⚠️
-              </div>
-
-              <strong>
-                Không thể tải dữ liệu
-              </strong>
-
-              <p id="error-detail"></p>
-
-              <button
-                id="retry-btn"
-                class="btn btn-primary"
-                type="button"
-              >
-                ↻ Thử lại
-              </button>
-
-            </div>
-
-
-            <div
-              id="brain-list"
-              class="list"
-            ></div>
-
-          </section>
-
-        </section>
-
-
-        <!-- =================================================
-             LEARNING
-             ================================================= -->
-
-        <section
-          id="learning-view"
-          class="learning-view hidden tab-page"
-        >
-
-          <div class="learning-header">
-
-            <div>
-
-              <h1>
-                🧠 Collective Learning
-              </h1>
-
-              <p>
-                Kiến thức mà Astra Brain đã học được từ hệ thống.
-              </p>
-
-            </div>
-
-            <button
-              id="learning-refresh-btn"
-              class="btn"
-              type="button"
-            >
-              ↻ Làm mới
-            </button>
-
-          </div>
-
-
-          <!-- LEARNING STATS -->
-
-          <section class="learning-stats">
-
-            <div class="learning-stat-card">
-
-              <div class="learning-stat-icon">
-                📚
-              </div>
-
-              <div>
-
-                <div
-                  id="learning-total"
-                  class="learning-stat-value"
-                >
-                  0
-                </div>
-
-                <div class="learning-stat-label">
-                  Kiến thức
-                </div>
-
-              </div>
-
-            </div>
-
-
-            <div class="learning-stat-card">
-
-              <div class="learning-stat-icon">
-                🎮
-              </div>
-
-              <div>
-
-                <div
-                  id="learning-games"
-                  class="learning-stat-value"
-                >
-                  0
-                </div>
-
-                <div class="learning-stat-label">
-                  Games đã phát hiện
-                </div>
-
-              </div>
-
-            </div>
-
-
-            <div class="learning-stat-card">
-
-              <div class="learning-stat-icon">
-                🔎
-              </div>
-
-              <div>
-
-                <div
-                  id="learning-candidates"
-                  class="learning-stat-value"
-                >
-                  0
-                </div>
-
-                <div class="learning-stat-label">
-                  Candidate
-                </div>
-
-              </div>
-
-            </div>
-
-
-            <div class="learning-stat-card">
-
-              <div class="learning-stat-icon">
-                ⚡
-              </div>
-
-              <div>
-
-                <div
-                  id="learning-events"
-                  class="learning-stat-value"
-                >
-                  0
-                </div>
-
-                <div class="learning-stat-label">
-                  Learning Events
-                </div>
-
-              </div>
-
-            </div>
-
-          </section>
-
-
-          <!-- SEARCH / TABS -->
-
-          <section class="panel learning-controls">
-
-            <input
-              type="search"
-              id="learning-search"
-              placeholder="🔎  Tìm kiến thức, topic, game..."
-              autocomplete="off"
-            />
-
-
-            <div class="learning-tabs">
-
-              <button
-                class="learning-tab active"
-                data-learning-tab="knowledge"
-                type="button"
-              >
-                📚 Knowledge
-              </button>
-
-              <button
-                class="learning-tab"
-                data-learning-tab="games"
-                type="button"
-              >
-                🎮 Games
-              </button>
-
-            </div>
-
-          </section>
-
-
-          <!-- LEARNING CONTENT -->
-
-          <section
-            id="learning-content"
-            class="panel"
-          >
-
-            <div
-              id="learning-loading"
-              class="empty"
-            >
-
-              <div class="spinner"></div>
-
-              <p>
-                Đang tải Learning...
-              </p>
-
-            </div>
-
-
-            <div
-              id="learning-error"
-              class="empty hidden"
-            >
-
-              <div class="brand-mark">
-                ⚠️
-              </div>
-
-              <strong>
-                Không thể tải Learning
-              </strong>
-
-              <p id="learning-error-detail"></p>
-
-              <button
-                id="learning-retry-btn"
-                class="btn btn-primary"
-                type="button"
-              >
-                ↻ Thử lại
-              </button>
-
-            </div>
-
-
-            <div
-              id="learning-empty"
-              class="empty hidden"
-            >
-
-              <div class="brand-mark">
-                🧠
-              </div>
-
-              <strong>
-                Astra chưa có kiến thức nào.
-              </strong>
-
-              <p>
-                Khi Brain bắt đầu gửi learning events,
-                chúng sẽ xuất hiện ở đây.
-              </p>
-
-            </div>
-
-
-            <div
-              id="learning-knowledge-list"
-              class="learning-list hidden"
-            ></div>
-
-
-            <div
-              id="learning-games-list"
-              class="learning-list hidden"
-            ></div>
-
-          </section>
-
-        </section>
-
-
-        <!-- =================================================
-             SKILLS
-             ================================================= -->
-
-        <section
-          id="skills-view"
-          class="learning-view hidden tab-page"
-        >
-
-          <div class="learning-header">
-
-            <div>
-
-              <h1>
-                🛠️ Skills
-              </h1>
-
-              <p>
-                Built-in skills và các skill do người dùng tạo.
-              </p>
-
-            </div>
-
-            <button
-              id="skills-refresh-btn"
-              class="btn"
-              type="button"
-            >
-              ↻ Làm mới
-            </button>
-
-          </div>
-
-
-          <!-- SKILLS SEARCH -->
-
-          <section class="panel learning-controls">
-
-            <input
-              type="search"
-              id="skills-search"
-              placeholder="🔎  Tìm skill, owner, tool, permission..."
-              autocomplete="off"
-            />
-
-
-            <div class="learning-tabs">
-
-              <button
-                class="learning-tab active"
-                data-skill-tab="all"
-                type="button"
-              >
-                ✨ Tất cả
-              </button>
-
-              <button
-                class="learning-tab"
-                data-skill-tab="builtin"
-                type="button"
-              >
-                🔧 Built-in
-              </button>
-
-              <button
-                class="learning-tab"
-                data-skill-tab="user"
-                type="button"
-              >
-                👤 User Created
-              </button>
-
-            </div>
-
-          </section>
-
-
-          <!-- SKILLS CONTENT -->
-
-          <section
-            id="skills-content"
-            class="panel"
-          >
-
-            <div
-              id="skills-loading"
-              class="empty"
-            >
-
-              <div class="spinner"></div>
-
-              <p>
-                Đang tải Skills...
-              </p>
-
-            </div>
-
-
-            <div
-              id="skills-error"
-              class="empty hidden"
-            >
-
-              <div class="brand-mark">
-                ⚠️
-              </div>
-
-              <strong>
-                Không thể tải Skills
-              </strong>
-
-              <p id="skills-error-detail"></p>
-
-              <button
-                id="skills-retry-btn"
-                class="btn btn-primary"
-                type="button"
-              >
-                ↻ Thử lại
-              </button>
-
-            </div>
-
-
-            <div
-              id="skills-empty"
-              class="empty hidden"
-            >
-
-              <div class="brand-mark">
-                🛠️
-              </div>
-
-              <strong>
-                Chưa có Skill nào.
-              </strong>
-
-              <p>
-                Các Built-in Skill sẽ xuất hiện tại đây.
-              </p>
-
-            </div>
-
-
-            <div
-              id="skills-list"
-              class="learning-list"
-            ></div>
-
-          </section>
-
-        </section>
-
-      </main>
-
-    </div>
-
-
-    <!-- =====================================================
-         BRAIN DETAIL MODAL
-         ===================================================== -->
-
-    <div
-      id="detail-modal"
-      class="modal hidden"
-    >
-
-      <div class="backdrop"></div>
-
-      <div class="modal-card">
-
-        <button
-          class="close"
-          id="modal-close"
-          type="button"
-          aria-label="Đóng"
-        >
-          &times;
-        </button>
-
-        <div id="detail-body"></div>
-
-      </div>
-
-    </div>
-
-
-    <!-- =====================================================
-         LEARNING DETAIL MODAL
-         ===================================================== -->
-
-    <div
-      id="learning-detail-modal"
-      class="modal hidden"
-    >
-
-      <div
-        class="backdrop learning-modal-backdrop"
-      ></div>
-
-      <div class="modal-card">
-
-        <button
-          class="close"
-          id="learning-detail-close"
-          type="button"
-          aria-label="Đóng"
-        >
-          &times;
-        </button>
-
-        <div id="learning-detail-body"></div>
-
-      </div>
-
-    </div>
-
-  </div>
-
-
-  <!-- =======================================================
-       APP JS
-       ======================================================= -->
-
-  <script src="/app.js"></script>
-
+<header class="top">
+ <div class="brand"><div class="logo">A</div><div>Astra Brain Registry<div class="muted small">AI control center</div></div></div>
+ <div class="actions"><span id="server-status" class="status">● Checking server</span><button class="btn" id="refresh">↻ Refresh</button></div>
+</header>
+<div class="layout">
+<aside class="sidebar"><div class="label">WORKSPACE</div><nav class="nav" id="nav">
+<button class="active" data-view="dashboard"><i>◫</i>Overview</button>
+<button data-view="brains"><i>◉</i>Brains</button>
+<button data-view="learning"><i>✧</i>Learning</button>
+<button data-view="skills"><i>⌘</i>Skills</button>
+<button data-view="chat"><i>▤</i>AI Chat</button>
+<button data-view="lab"><i>⚗</i>Astra Lab</button>
+</nav></aside>
+<main>
+<section class="view" id="view-dashboard">
+<div class="heading"><div><div class="eyebrow">SYSTEM OVERVIEW</div><h1>Chào bro 👋</h1><p class="muted">Một nơi để theo dõi toàn bộ Astra Brain.</p></div><div class="actions"><button class="btn" data-go="brains">Xem Brains</button><button class="btn primary" data-go="chat">Mở AI Chat ✦</button></div></div>
+<div class="grid stats">
+<div class="stat"><div class="stat-title">Total Brains <span>◉</span></div><div class="stat-num" id="s-total">—</div><div class="muted small">Registered</div></div>
+<div class="stat"><div class="stat-title">Online <span>↗</span></div><div class="stat-num" id="s-online">—</div><div class="muted small">Active brains</div></div>
+<div class="stat"><div class="stat-title">Offline <span>◌</span></div><div class="stat-num" id="s-offline">—</div><div class="muted small">Inactive brains</div></div>
+<div class="stat"><div class="stat-title">Games <span>⌁</span></div><div class="stat-num" id="s-games">—</div><div class="muted small">Recorded games</div></div>
+</div>
+<div class="grid two">
+<section class="card"><div class="card-head"><div><h3>Brains gần đây</h3><div class="muted small">Nhấn một brain để xem chi tiết.</div></div><button class="btn" data-go="brains">Tất cả →</button></div><div class="list" id="overview-brains"><div class="empty">Đang tải…</div></div></section>
+<section class="card"><div class="card-head"><div><h3>Quick access</h3><span class="muted small">Công cụ</span></div></div><div class="quick">
+<button class="btn" data-go="learning"><strong>✧ Learning Center</strong><span>Knowledge, games, events</span></button>
+<button class="btn" data-go="skills"><strong>⌘ Skill Registry</strong><span>Danh mục kỹ năng AI</span></button>
+<button class="btn" data-go="lab"><strong>⚗ Astra Lab</strong><span>Gửi tác vụ đến backend</span></button>
+</div><div id="dash-error" class="error hidden" style="margin-top:12px"></div></section>
+</div>
+</section>
+<section class="view hidden" id="view-brains">
+<div class="heading"><div><div class="eyebrow">REGISTRY</div><h1>Brains</h1><p class="muted">Tìm kiếm và xem chi tiết brain.</p></div><button class="btn" id="reload-brains">↻ Tải lại</button></div>
+<section class="card"><div class="toolbar"><input class="field search" id="brain-search" placeholder="Tìm theo tên hoặc ID…"><div class="chips"><button class="chip active" data-filter="all">Tất cả</button><button class="chip" data-filter="online">Online</button><button class="chip" data-filter="offline">Offline</button></div></div><div class="list" id="brain-list"><div class="empty">Đang tải…</div></div><div id="brain-error" class="error hidden"></div></section>
+</section>
+<section class="view hidden" id="view-learning">
+<div class="heading"><div><div class="eyebrow">MEMORY & EXPERIENCE</div><h1>Learning Center</h1><p class="muted">Dữ liệu học tập từ backend.</p></div><button class="btn" id="reload-learning">↻ Tải lại</button></div>
+<div class="grid stats">
+<div class="stat"><div class="stat-title">Knowledge</div><div class="stat-num" id="l-knowledge">—</div></div><div class="stat"><div class="stat-title">Games</div><div class="stat-num" id="l-games">—</div></div><div class="stat"><div class="stat-title">Candidates</div><div class="stat-num" id="l-candidates">—</div></div><div class="stat"><div class="stat-title">Events</div><div class="stat-num" id="l-events">—</div></div>
+</div>
+<section class="card"><div class="tabs"><button class="tab active" data-ltab="knowledge">Knowledge</button><button class="tab" data-ltab="games">Games</button><button class="tab" data-ltab="events">Events</button></div><input class="field" id="learning-search" placeholder="Tìm dữ liệu…" style="margin-bottom:13px"><div class="list" id="learning-list"><div class="empty">Chưa tải dữ liệu.</div></div><div id="learning-error" class="error hidden"></div></section>
+</section>
+<section class="view hidden" id="view-skills">
+<div class="heading"><div><div class="eyebrow">CAPABILITIES</div><h1>Skills</h1><p class="muted">Danh mục kỹ năng được backend công bố.</p></div><button class="btn" id="reload-skills">↻ Tải lại</button></div>
+<section class="card"><div class="toolbar"><input class="field search" id="skill-search" placeholder="Tìm skill…"><div class="chips"><button class="chip active" data-sfilter="all">Tất cả</button><button class="chip" data-sfilter="builtin">Built-in</button><button class="chip" data-sfilter="user">User</button></div></div><div class="list" id="skill-list"><div class="empty">Đang tải skills…</div></div><div id="skill-error" class="error hidden"></div></section>
+</section>
+<section class="view hidden" id="view-chat">
+<div class="heading"><div><div class="eyebrow">CONVERSATION</div><h1>AI Chat</h1><p class="muted">Trò chuyện với Astra qua API backend.</p></div><button class="btn" id="clear-chat">Xóa hội thoại</button></div>
+<div class="notice">Chat sẽ dùng route tương thích được cấu hình bên dưới. Nếu request thất bại, giao diện sẽ báo lỗi thay vì giả vờ AI đã trả lời.</div>
+<div class="chat-layout"><section class="card chat-card"><div id="messages" class="messages"><div class="message"><span class="who">ASTRA</span>Xin chào bro! Giao diện đã sẵn sàng. Khi route chat được nối đúng, mình có thể trò chuyện tại đây. ✨</div></div><form id="chat-form" class="chat-form"><textarea class="field" id="chat-input" rows="1" placeholder="Nhắn tin cho Astra…" required></textarea><button class="btn primary" id="send" type="submit">Gửi ↑</button></form></section>
+<aside class="card"><h3>Connection</h3><p class="muted small">Trạng thái API chat</p><div class="cell"><small>Endpoint</small><strong id="chat-endpoint">Chưa xác minh</strong></div><div class="cell" style="margin-top:8px"><small>Status</small><strong id="chat-state">Chưa kết nối</strong></div><p class="muted small" style="margin-top:12px">Không đặt API key hoặc secret trong frontend.</p></aside></div>
+</section>
+<section class="view hidden" id="view-lab">
+<div class="heading"><div><div class="eyebrow">EXPERIMENT WORKSPACE</div><h1>Astra Lab</h1><p class="muted">Không gian thử nghiệm tác vụ AI.</p></div></div>
+<div class="notice">Lab không thực thi code tùy ý trực tiếp trên server. Chỉ sử dụng API được backend hỗ trợ.</div>
+<div class="grid two"><section class="card"><div class="card-head"><h3>Task workspace</h3></div><form id="lab-form" class="labform"><label>Chế độ<select class="field" id="lab-mode"><option value="analyze">Phân tích</option><option value="explain">Giải thích</option><option value="plan">Lập kế hoạch</option><option value="code">Hỗ trợ code</option></select></label><label>Yêu cầu<textarea class="field" id="lab-prompt" rows="6" placeholder="Mô tả điều bro muốn AI thực hiện…" required></textarea></label><button class="btn primary" id="lab-run">Chạy tác vụ →</button></form></section><section class="card"><div class="card-head"><h3>Output</h3><span class="pill" id="lab-state">Idle</span></div><div class="output" id="lab-output">Chưa có tác vụ.</div><div class="error hidden" id="lab-error" style="margin-top:10px"></div></section></div>
+</section>
+<div class="footer">Astra Brain Registry · Built for mobile and desktop</div>
+</main></div>
+<div class="modal hidden" id="modal" role="dialog" aria-modal="true"><div class="backdrop" data-close></div><div class="modalbox"><div class="card-head"><h3 id="modal-title">Brain details</h3><button class="btn" data-close>✕</button></div><div class="detail" id="modal-body"></div></div></div>
+<div class="toast hidden" id="toast" role="status"></div>
+<script>
+(()=>{
+"use strict";
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const S={brains:[],filter:"all",learningTab:"knowledge",learning:{knowledge:[],games:[],events:[]},skills:[],skillFilter:"all",view:"dashboard",busy:false};
+const esc=x=>String(x??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const arr=x=>Array.isArray(x)?x:Array.isArray(x?.data)?x.data:Array.isArray(x?.items)?x.items:Array.isArray(x?.brains)?x.brains:Array.isArray(x?.results)?x.results:[];
+const error=(id,msg)=>{const e=$("#"+id);if(e){e.textContent=msg||"";e.classList.toggle("hidden",!msg)}};
+let toastTimer;
+function toast(t){const e=$("#toast");e.textContent=t;e.classList.remove("hidden");clearTimeout(toastTimer);toastTimer=setTimeout(()=>e.classList.add("hidden"),3500)}
+async function api(path,opt={}){
+ const headers=new Headers(opt.headers||{});if(opt.body&&!headers.has("Content-Type"))headers.set("Content-Type","application/json");
+ const r=await fetch(path,{...opt,headers,credentials:"same-origin"});const txt=await r.text();let d={};try{d=txt?JSON.parse(txt):{}}catch{d={raw:txt}}
+ if(!r.ok){const e=new Error(d.error||d.message||"HTTP "+r.status);e.status=r.status;throw e}return d;
+}
+async function first(paths){let last;for(const p of paths){try{return {path:p,data:await api(p)}}catch(e){last=e;if(![404,405].includes(e.status))throw e}}throw last||new Error("Không tìm thấy API")}
+function norm(b){const id=b?.id??b?.brainId??b?._id??b?.userId??"unknown";return {...b,_idUI:String(id),_nameUI:String(b?.name??b?.brainName??b?.displayName??b?.username??"Brain "+id),_onlineUI:typeof b?.online==="boolean"?b.online:typeof b?.isOnline==="boolean"?b.isOnline:["online","active","connected","ready"].includes(String(b?.status||"").toLowerCase())}}
+function brainHTML(raw){const b=norm(raw);return `<div class="row click" role="button" tabindex="0" data-brain="${esc(b._idUI)}"><div class="avatar">◉</div><div class="row-main"><div class="row-title">${esc(b._nameUI)}</div><div class="row-meta">${esc(b.game||b.placeId||("ID "+b._idUI))}</div></div><span class="pill ${b._onlineUI?"online":""}">${b._onlineUI?"● Online":"○ Offline"}</span></div>`}
+function renderBrains(){
+ const q=($("#brain-search")?.value||"").toLowerCase().trim();
+ const list=S.brains.filter(raw=>{const b=norm(raw);return(S.filter==="all"||(S.filter==="online"?b._onlineUI:!b._onlineUI))&&JSON.stringify(b).toLowerCase().includes(q)});
+ $("#brain-list").innerHTML=list.length?list.map(brainHTML).join(""):'<div class="empty"><strong>Không tìm thấy brain</strong>Thử từ khóa hoặc bộ lọc khác.</div>';
+ $("#overview-brains").innerHTML=S.brains.length?S.brains.slice(0,5).map(brainHTML).join(""):'<div class="empty">Chưa có dữ liệu brain.</div>';
+ const on=S.brains.filter(x=>norm(x)._onlineUI).length;$("#s-total").textContent=S.brains.length;$("#s-online").textContent=on;$("#s-offline").textContent=S.brains.length-on;
+}
+async function loadBrains(){error("brain-error","");try{const {data}=await first(["/api/brains","/api/dashboard/brains"]);S.brains=arr(data);renderBrains();$("#server-status").textContent="● Server responding";$("#server-status").style.color="var(--green)";error("dash-error","")}catch(e){error("brain-error","Không tải được Brains: "+e.message);error("dash-error","Registry API: "+e.message);$("#brain-list").innerHTML='<div class="empty">Không tải được dữ liệu. Kiểm tra API và quyền truy cập.</div>';$("#server-status").textContent="● API unavailable";$("#server-status").style.color="var(--red)"}}
+async function loadGamesCount(){try{const {data}=await first(["/api/dashboard/games","/api/games"]);$("#s-games").textContent=Number(data.total??data.count??arr(data).length)}catch{$("#s-games").textContent="—"}}
+function openView(v){if(!$("#view-"+v))return;S.view=v;$$(".view").forEach(x=>x.classList.toggle("hidden",x.id!=="view-"+v));$$("[data-view]").forEach(x=>x.classList.toggle("active",x.dataset.view===v));if(v==="brains")loadBrains();if(v==="learning")loadLearning();if(v==="skills")loadSkills()}
+function showDetail(id){const b=S.brains.find(x=>norm(x)._idUI===String(id));if(!b)return;$("#modal-title").textContent=norm(b)._nameUI;$("#modal-body").innerHTML=Object.entries(b).filter(([k,v])=>!k.startsWith("_")&&(typeof v!=="object"||v===null)).slice(0,40).map(([k,v])=>`<div class="cell"><small>${esc(k)}</small><strong>${esc(v)}</strong></div>`).join("")||'<div class="empty">Không có chi tiết.</div>';$("#modal").classList.remove("hidden")}
+function renderItems(target,items){if(!items.length){target.innerHTML='<div class="empty"><strong>Chưa có dữ liệu</strong>Backend chưa trả về mục nào.</div>';return}target.innerHTML=items.map((x,i)=>{const o=x&&typeof x==="object"?x:{value:x};const title=o.title??o.name??o.label??o.skill??o.key??o.id??"Mục "+(i+1);const desc=o.description??o.summary??o.content??o.text??o.message??"";return `<div class="row"><div class="avatar">${i+1}</div><div class="row-main"><div class="row-title">${esc(title)}</div><div class="row-meta" style="white-space:pre-wrap;margin-top:4px">${esc(desc).slice(0,900)}</div><div class="row-meta" style="margin-top:6px">${Object.entries(o).filter(([k,v])=>!["title","name","label","skill","key","id","description","summary","content","text","message"].includes(k)&&(typeof v!=="object"||v===null)).slice(0,7).map(([k,v])=>esc(k)+": "+esc(v)).join(" · ")}</div></div></div>`}).join("")}
+function updateLearningCounts(){ $("#l-knowledge").textContent=S.learning.knowledge.length||"—";$("#l-games").textContent=S.learning.games.length||"—";$("#l-events").textContent=S.learning.events.length||"—" }
+async function loadLearning(){
+ error("learning-error","");$("#learning-list").innerHTML='<div class="empty">Đang tải…</div>';
+ const paths={knowledge:["/api/dashboard/knowledge","/api/knowledge"],games:["/api/dashboard/games","/api/games"],events:["/api/dashboard/events","/api/events"]};
+ try{const {data}=await first(paths[S.learningTab]);S.learning[S.learningTab]=arr(data);updateLearningCounts();filterLearning();$("#l-candidates").textContent=data.candidateCount??data.candidates?.length??"—"}catch(e){error("learning-error","Learning API: "+e.message);$("#learning-list").innerHTML='<div class="empty">Không tải được dữ liệu cho tab này.</div>'}
+}
+function filterLearning(){const q=($("#learning-search").value||"").toLowerCase();renderItems($("#learning-list"),(S.learning[S.learningTab]||[]).filter(x=>JSON.stringify(x).toLowerCase().includes(q)))}
+async function loadSkills(){error("skill-error","");try{const {data}=await first(["/api/skills","/api/dashboard/skills"]);S.skills=arr(data);filterSkills()}catch(e){error("skill-error","Skills API: "+e.message);$("#skill-list").innerHTML='<div class="empty">Chưa tải được danh sách skills.</div>'}}
+function filterSkills(){const q=($("#skill-search").value||"").toLowerCase();const list=S.skills.filter(x=>{const o=typeof x==="object"?x:{name:x};const kind=String(o.type??o.source??o.category??(o.builtin?"builtin":"user")).toLowerCase();const built=o.builtin===true||/built.?in|system|core/.test(kind);return(!q||JSON.stringify(o).toLowerCase().includes(q))&&(S.skillFilter==="all"||(S.skillFilter==="builtin"?built:!built))});renderItems($("#skill-list"),list)}
+async function refresh(){await Promise.allSettled([loadBrains(),loadGamesCount()]);if(S.view==="learning")loadLearning();if(S.view==="skills")loadSkills()}
+function message(role,text){const el=document.createElement("div");el.className="message "+(role==="user"?"user":"");const who=document.createElement("span");who.className="who";who.textContent=role==="user"?"BẠN":"ASTRA";const body=document.createElement("div");body.textContent=text;el.append(who,body);$("#messages").append(el);$("#messages").scrollTop=$("#messages").scrollHeight}
+async function chat(text){
+ if(S.busy)return;S.busy=true;$("#send").disabled=true;message("user",text);const pending=document.createElement("div");pending.className="message";pending.textContent="Đang gửi…";$("#messages").append(pending);
+ try{
+   // Candidate route and payload shapes; replace with the exact server contract if needed.
+   let result,path,attemptError;
+   for(const p of ["/api/chat","/api/v1/chat","/v1/chat/completions","/api/generate"]){
+     const body=p==="/v1/chat/completions"?{messages:[{role:"user",content:text}]}:p==="/api/generate"?{prompt:text}:{question:text};
+     try{result=await api(p,{method:"POST",body:JSON.stringify(body)});path=p;break}catch(e){attemptError=e;if(![404,405].includes(e.status))throw e}
+   }
+   if(!path)throw attemptError||new Error("Không tìm thấy route chat");
+   pending.remove();const answer=result.answer??result.response??result.message?.content??result.choices?.[0]?.message?.content??result.text??result.output??JSON.stringify(result,null,2);message("assistant",typeof answer==="string"?answer:JSON.stringify(answer));$("#chat-endpoint").textContent=path;$("#chat-state").textContent="Response received";
+ }catch(e){pending.remove();message("assistant","Chưa kết nối được API chat: "+e.message+"\nCần khớp route với server.js.");$("#chat-state").textContent="Request failed"}
+ finally{S.busy=false;$("#send").disabled=false}
+}
+async function runLab(prompt,mode){
+ $("#lab-run").disabled=true;$("#lab-state").textContent="Running";error("lab-error","");$("#lab-output").textContent="Đang gửi tác vụ…";
+ const candidates=[["/api/agent",{message:prompt,mode}],["/api/execute",{task:prompt,mode}],["/api/generate",{prompt,mode}],["/api/chat",{question:prompt,mode}]];
+ try{let done=false,last;for(const [path,body] of candidates){try{const data=await api(path,{method:"POST",body:JSON.stringify(body)});$("#lab-output").textContent=JSON.stringify(data,null,2);$("#lab-state").textContent="Complete";done=true;break}catch(e){last=e;if(![404,405].includes(e.status))throw e}}if(!done)throw last||new Error("Không tìm thấy endpoint tác vụ")}
+ catch(e){$("#lab-output").textContent="Không có kết quả.";$("#lab-state").textContent="Blocked";error("lab-error","Lab chưa được kết nối: "+e.message)}
+ finally{$("#lab-run").disabled=false}
+}
+$("#nav").addEventListener("click",e=>{const b=e.target.closest("[data-view]");if(b)openView(b.dataset.view)});
+document.addEventListener("click",e=>{const go=e.target.closest("[data-go]");if(go)openView(go.dataset.go);const b=e.target.closest("[data-brain]");if(b)showDetail(b.dataset.brain);if(e.target.closest("[data-close]"))$("#modal").classList.add("hidden")});
+document.addEventListener("keydown",e=>{if(e.key==="Escape")$("#modal").classList.add("hidden");if((e.key==="Enter"||e.key===" ")&&e.target.matches("[data-brain][role=button]"))showDetail(e.target.dataset.brain)});
+$("#refresh").onclick=refresh;$("#reload-brains").onclick=loadBrains;$("#reload-learning").onclick=loadLearning;$("#reload-skills").onclick=loadSkills;$("#brain-search").oninput=renderBrains;$("#skill-search").oninput=filterSkills;$("#learning-search").oninput=filterLearning;
+$$("[data-filter]").forEach(b=>b.onclick=()=>{S.filter=b.dataset.filter;$$("[data-filter]").forEach(x=>x.classList.toggle("active",x===b));renderBrains()});
+$$("[data-ltab]").forEach(b=>b.onclick=()=>{S.learningTab=b.dataset.ltab;$$("[data-ltab]").forEach(x=>x.classList.toggle("active",x===b));loadLearning()});
+$$("[data-sfilter]").forEach(b=>b.onclick=()=>{S.skillFilter=b.dataset.sfilter;$$("[data-sfilter]").forEach(x=>x.classList.toggle("active",x===b));filterSkills()});
+$("#chat-form").onsubmit=e=>{e.preventDefault();const i=$("#chat-input"),t=i.value.trim();if(t){i.value="";chat(t)}};
+$("#clear-chat").onclick=()=>{$("#messages").innerHTML="";message("assistant","Đã xóa lịch sử hiển thị trong giao diện.")};
+$("#lab-form").onsubmit=e=>{e.preventDefault();const p=$("#lab-prompt").value.trim();if(p)runLab(p,$("#lab-mode").value)};
+refresh();
+})();
+</script>
 </body>
 </html>
